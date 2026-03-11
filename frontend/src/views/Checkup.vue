@@ -7,7 +7,13 @@
 
     <el-table :data="missingList" stripe border>
       <el-table-column prop="community_name" label="社区" width="160" />
-      <el-table-column prop="elder_name" label="老人姓名" width="120" />
+      <el-table-column prop="elder_name" label="老人姓名" width="120">
+        <template #default="{ row }">
+          <el-link type="primary" @click="$router.push(`/elder/${row.elder_id}`)" style="font-weight: 600;">
+            {{ row.elder_name }}
+          </el-link>
+        </template>
+      </el-table-column>
       <el-table-column label="已完成次数" width="120" align="center">
         <template #default="{ row }">
           <el-tag :type="row.done === 0 ? 'danger' : 'warning'" size="default">

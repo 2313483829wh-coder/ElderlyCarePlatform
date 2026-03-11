@@ -14,7 +14,13 @@
       </h3>
       <el-table :data="alerts" stripe border>
         <el-table-column prop="community_name" label="社区" width="140" />
-        <el-table-column prop="elder_name" label="老人" width="100" />
+        <el-table-column prop="elder_name" label="老人" width="100">
+          <template #default="{ row }">
+            <el-link type="primary" @click="$router.push(`/elder/${row.elder_id}`)" style="font-weight: 600;">
+              {{ row.elder_name }}
+            </el-link>
+          </template>
+        </el-table-column>
         <el-table-column prop="level_display" label="级别" width="80">
           <template #default="{ row }">
             <el-tag :type="row.level === 'critical' ? 'danger' : 'warning'" size="small">
