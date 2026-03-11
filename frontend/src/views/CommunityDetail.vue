@@ -20,6 +20,13 @@
       <el-table-column label="年龄" width="60" align="center">
         <template #default="{ row }">{{ row.age }}岁</template>
       </el-table-column>
+      <el-table-column label="状态" width="80" align="center">
+        <template #default="{ row }">
+          <el-tag :type="row.is_active ? 'success' : 'info'" size="small">
+            {{ row.is_active ? '在住' : '已离开' }}
+          </el-tag>
+        </template>
+      </el-table-column>
       <el-table-column label="心跳(bpm)" width="110" align="center">
         <template #default="{ row }">
           <span v-if="row.today_health" :class="cellClass(row.today_health.heart_rate, 50, 120)">

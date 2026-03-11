@@ -47,7 +47,7 @@ class ElderViewSet(viewsets.ModelViewSet):
     def by_community(self, request, community_id=None):
         """获取某个社区下所有老人（带今日健康数据和预警标记）"""
         elders = Elder.objects.filter(
-            community_id=community_id, is_active=True
+            community_id=community_id
         ).select_related('community')
         serializer = self.get_serializer(elders, many=True)
         return Response(serializer.data)
