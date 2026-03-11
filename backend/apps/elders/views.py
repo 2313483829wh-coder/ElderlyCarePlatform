@@ -34,6 +34,15 @@ class ElderViewSet(viewsets.ModelViewSet):
     search_fields = ['name', 'id_card', 'phone']
     filterset_fields = ['community', 'is_active']
 
+    def update(self, request, *args, **kwargs):
+        """支持部分更新老人信息"""
+        partial = True  # 允许部分更新
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        return Response(serializer.data)
+
     @action(detail=False, methods=['get'], url_path='by-community/(?P<community_id>[^/.]+)')
     def by_community(self, request, community_id=None):
         """获取某个社区下所有老人（带今日健康数据和预警标记）"""
