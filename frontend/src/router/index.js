@@ -22,6 +22,11 @@ const routes = [
         meta: { title: '社区详情' },
       },
       {
+        path: 'elder/:id',
+        component: () => import('@/views/ElderDetail.vue'),
+        meta: { title: '老人详情' },
+      },
+      {
         path: 'checkup',
         component: () => import('@/views/Checkup.vue'),
         meta: { title: '体检管理' },

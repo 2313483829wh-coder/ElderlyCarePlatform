@@ -9,7 +9,12 @@
               :row-class-name="rowClass" style="width: 100%;">
       <el-table-column prop="name" label="姓名" width="90" fixed>
         <template #default="{ row }">
-          <span style="font-weight: 600;">{{ row.name }}</span>
+          <el-link 
+            type="primary" 
+            @click="$router.push(`/elder/${row.id}`)"
+            style="font-weight: 600; font-size: 15px;">
+            {{ row.name }}
+          </el-link>
         </template>
       </el-table-column>
       <el-table-column label="年龄" width="60" align="center">
