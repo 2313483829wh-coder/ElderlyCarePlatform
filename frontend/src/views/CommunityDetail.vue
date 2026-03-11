@@ -5,7 +5,30 @@
       <h2 v-if="communityName">{{ communityName }} — 老人健康实时总览</h2>
     </div>
 
-    <el-table :data="elders" v-loading="loading" stripe border size="default"
+    <!-- 筛选条件 -->
+    <el-card style="margin-bottom: 16px;">
+      <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
+        <span style="font-weight: 600; color: #1d1d1f;">筛选条件：</span>
+        <el-radio-group v-model="filter.status" size="default">
+          <el-radio-button label="all">全部</el-radio-button>
+          <el-radio-button label="active">在住</el-radio-button>
+          <el-radio-button label="inactive">已离开</el-radio-button>
+        </el-radio-group>
+        <el-radio-group v-model="filter.report" size="default">
+          <el-radio-button label="all">全部</el-radio-button>
+          <el-radio-button label="reported">已上报</el-radio-button>
+          <el-radio-button label="unreported">未上报</el-radio-button>
+        </el-radio-group>
+        <el-radio-group v-model="filter.health" size="default">
+          <el-radio-button label="all">全部</el-radio-button>
+          <el-radio-button label="normal">正常</el-radio-button>
+          <el-radio-button label="abnormal">有异常</el-radio-button>
+        </el-radio-group>
+        <el-tag type="info">共 {{ filteredElders.length }} 人</el-tag>
+      </div>
+    </el-card>
+
+    <el-table :data="filteredElders" v-loading="loading" stripe border size="default"
               :row-class-name="rowClass" style="width: 100%;">
       <el-table-column prop="name" label="姓名" width="90" fixed>
         <template #default="{ row }">
@@ -109,7 +132,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import request from '@/utils/request'
 
@@ -117,6 +140,29 @@ const route = useRoute()
 const loading = ref(true)
 const elders = ref([])
 const communityName = ref('')
+const filter = ref({
+  status: 'all',    // all, active, inactive
+  report: 'all',    // all, reported, unreported
+  health: 'all'     // all, normal, abnormal
+})
+
+const filteredElders = computed(() => {
+  return elders.value.filter(elder => {
+    // 筛选状态
+    if (filter.value.status === 'active' && !elder.is_active) return false
+    if (filter.value.status === 'inactive' && elder.is_active) return false
+    
+    // 筛选上报情况
+    if (filter.value.report === 'reported' && !elder.today_health) return false
+    if (filter.value.report === 'unreported' && elder.today_health) return false
+    
+    // 筛选健康状况
+    if (filter.value.health === 'normal' && elder.today_health?.anomalies?.length) return false
+    if (filter.value.health === 'abnormal' && !elder.today_health?.anomalies?.length) return false
+    
+    return true
+  })
+})
 
 function cellClass(val, min, max) {
   if (val == null) return ''
