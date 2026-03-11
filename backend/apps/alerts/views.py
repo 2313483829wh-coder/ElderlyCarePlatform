@@ -7,7 +7,8 @@ from .serializers import AlertSerializer
 
 
 class AlertViewSet(viewsets.ModelViewSet):
-    queryset = Alert.objects.select_related('elder', 'elder__community').all()
+    # 默认只显示在用社区的预警
+    queryset = Alert.objects.select_related('elder', 'elder__community').filter(elder__community__is_active=True)
     serializer_class = AlertSerializer
     filterset_fields = ['alert_type', 'level', 'status', 'elder', 'elder__community']
     search_fields = ['title', 'detail']
@@ -24,7 +25,8 @@ class AlertViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'])
     def pending(self, request):
         community_id = request.query_params.get('community')
-        qs = Alert.objects.filter(status='pending')
+        # 只显示在用社区的预警
+        qs = Alert.objects.filter(status='pending', elder__community__is_active=True)
         if community_id:
             qs = qs.filter(elder__community_id=community_id)
         return Response(AlertSerializer(qs, many=True).data)

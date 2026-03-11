@@ -19,7 +19,8 @@ class CheckupViewSet(viewsets.ModelViewSet):
         year = int(request.query_params.get('year', date.today().year))
         community_id = request.query_params.get('community')
 
-        elders = Elder.objects.filter(is_active=True)
+        # 只查询在用社区的活跃老人
+        elders = Elder.objects.filter(is_active=True, community__is_active=True)
         if community_id:
             elders = elders.filter(community_id=community_id)
 
