@@ -7,6 +7,7 @@ class Community(models.Model):
     contact_person = models.CharField('负责人', max_length=64)
     contact_phone = models.CharField('联系电话', max_length=20)
     description = models.TextField('简介', blank=True, default='')
+    is_active = models.BooleanField('在用', default=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

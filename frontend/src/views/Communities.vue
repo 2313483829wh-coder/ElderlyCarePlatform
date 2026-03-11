@@ -2,7 +2,15 @@
   <div>
     <!-- 顶部操作栏 -->
     <div style="margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center;">
-      <h2 style="margin: 0; font-size: 24px; font-weight: 700; color: #1d1d1f;">社区管理</h2>
+      <div style="display: flex; align-items: center; gap: 16px;">
+        <h2 style="margin: 0; font-size: 24px; font-weight: 700; color: #1d1d1f;">社区管理</h2>
+        <el-radio-group v-model="statusFilter" size="default">
+          <el-radio-button label="all">全部</el-radio-button>
+          <el-radio-button label="active">在用</el-radio-button>
+          <el-radio-button label="inactive">停用</el-radio-button>
+        </el-radio-group>
+        <el-tag type="info">共 {{ filteredCommunities.length }} 个社区</el-tag>
+      </div>
       <el-button type="primary" @click="openAddDialog">
         <el-icon><Plus /></el-icon>
         添加社区
@@ -10,12 +18,19 @@
     </div>
 
     <el-row :gutter="20">
-      <el-col :span="8" v-for="c in communities" :key="c.id">
+      <el-col :span="8" v-for="c in filteredCommunities" :key="c.id">
         <el-card 
           class="community-card" 
+          :class="{ inactive: !c.is_active }"
           shadow="hover" 
           @click="$router.push(`/community/${c.id}`)"
           @contextmenu.prevent="openEditDialog(c)">
+          <!-- 右上角状态标签 -->
+          <div class="status-badge">
+            <el-tag :type="c.is_active ? 'success' : 'info'" size="small">
+              {{ c.is_active ? '在用' : '停用' }}
+            </el-tag>
+          </div>
           <div class="card-top">
             <el-icon :size="36" color="#1a73e8"><OfficeBuilding /></el-icon>
             <div>
@@ -67,6 +82,14 @@
         <el-form-item label="社区简介" prop="description">
           <el-input v-model="editForm.description" type="textarea" :rows="3" placeholder="可选" />
         </el-form-item>
+        <el-form-item v-if="!isAddMode" label="状态" prop="is_active">
+          <el-switch 
+            v-model="editForm.is_active" 
+            active-text="在用" 
+            inactive-text="停用"
+            :active-value="true"
+            :inactive-value="false" />
+        </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="showEditDialog = false">取消</el-button>
@@ -83,6 +106,7 @@ import { Plus } from '@element-plus/icons-vue'
 import request from '@/utils/request'
 
 const communities = ref([])
+const statusFilter = ref('all')
 const showEditDialog = ref(false)
 const isAddMode = ref(false)
 const formRef = ref()
@@ -93,6 +117,14 @@ const editForm = reactive({
   contact_person: '',
   contact_phone: '',
   description: '',
+  is_active: true,
+})
+
+const filteredCommunities = computed(() => {
+  if (statusFilter.value === 'all') return communities.value
+  if (statusFilter.value === 'active') return communities.value.filter(c => c.is_active)
+  if (statusFilter.value === 'inactive') return communities.value.filter(c => !c.is_active)
+  return communities.value
 })
 
 async function loadData() {
@@ -108,6 +140,7 @@ function openAddDialog() {
   editForm.contact_person = ''
   editForm.contact_phone = ''
   editForm.description = ''
+  editForm.is_active = true
   showEditDialog.value = true
 }
 
@@ -119,6 +152,7 @@ function openEditDialog(community) {
   editForm.contact_person = community.contact_person
   editForm.contact_phone = community.contact_phone
   editForm.description = community.description || ''
+  editForm.is_active = community.is_active
   showEditDialog.value = true
 }
 
@@ -131,6 +165,7 @@ async function saveEdit() {
       contact_person: editForm.contact_person,
       contact_phone: editForm.contact_phone,
       description: editForm.description || '',
+      is_active: editForm.is_active,
     }
     
     if (isAddMode.value) {
@@ -161,6 +196,12 @@ onMounted(loadData)
   border-radius: 16px;
   background: #fff;
   border: 1px solid #e5e5e7;
+  position: relative;
+  
+  &.inactive {
+    opacity: 0.6;
+    filter: grayscale(30%);
+  }
   
   &:hover {
     transform: translateY(-4px);
@@ -170,6 +211,13 @@ onMounted(loadData)
   
   :deep(.el-card__body) {
     padding: 28px;
+  }
+  
+  .status-badge {
+    position: absolute;
+    right: 16px;
+    top: 16px;
+    z-index: 1;
   }
   
   .card-top {
