@@ -1,5 +1,14 @@
 <template>
   <div>
+    <!-- 顶部操作栏 -->
+    <div style="margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center;">
+      <h2 style="margin: 0; font-size: 24px; font-weight: 700; color: #1d1d1f;">社区管理</h2>
+      <el-button type="primary" @click="openAddDialog">
+        <el-icon><Plus /></el-icon>
+        添加社区
+      </el-button>
+    </div>
+
     <el-row :gutter="20">
       <el-col :span="8" v-for="c in communities" :key="c.id">
         <el-card 
@@ -40,8 +49,8 @@
       </el-col>
     </el-row>
 
-    <!-- 编辑社区对话框 -->
-    <el-dialog v-model="showEditDialog" title="编辑社区信息" width="500px">
+    <!-- 添加/编辑社区对话框 -->
+    <el-dialog v-model="showEditDialog" :title="isAddMode ? '添加社区' : '编辑社区信息'" width="500px">
       <el-form :model="editForm" label-width="100px" ref="formRef">
         <el-form-item label="社区名称" prop="name" :rules="[{required:true, message:'请输入社区名称'}]">
           <el-input v-model="editForm.name" placeholder="请输入社区名称" />
@@ -53,24 +62,29 @@
           <el-input v-model="editForm.contact_person" placeholder="请输入负责人姓名" />
         </el-form-item>
         <el-form-item label="联系电话" prop="contact_phone" :rules="[{required:true, message:'请输入联系电话'}]">
-          <el-input v-model="editForm.contact_phone" placeholder="请输入联系电话" />
+          <el-input v-model="editForm.contact_phone" placeholder="请输入联系电话" maxlength="11" />
+        </el-form-item>
+        <el-form-item label="社区简介" prop="description">
+          <el-input v-model="editForm.description" type="textarea" :rows="3" placeholder="可选" />
         </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="showEditDialog = false">取消</el-button>
-        <el-button type="primary" @click="saveEdit">保存</el-button>
+        <el-button type="primary" @click="saveEdit">{{ isAddMode ? '添加' : '保存' }}</el-button>
       </template>
     </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
+import { Plus } from '@element-plus/icons-vue'
 import request from '@/utils/request'
 
 const communities = ref([])
 const showEditDialog = ref(false)
+const isAddMode = ref(false)
 const formRef = ref()
 const editForm = reactive({
   id: null,
@@ -78,6 +92,7 @@ const editForm = reactive({
   address: '',
   contact_person: '',
   contact_phone: '',
+  description: '',
 })
 
 async function loadData() {
@@ -85,30 +100,52 @@ async function loadData() {
   communities.value = res.results || res
 }
 
+function openAddDialog() {
+  isAddMode.value = true
+  editForm.id = null
+  editForm.name = ''
+  editForm.address = ''
+  editForm.contact_person = ''
+  editForm.contact_phone = ''
+  editForm.description = ''
+  showEditDialog.value = true
+}
+
 function openEditDialog(community) {
+  isAddMode.value = false
   editForm.id = community.id
   editForm.name = community.name
   editForm.address = community.address
   editForm.contact_person = community.contact_person
   editForm.contact_phone = community.contact_phone
+  editForm.description = community.description || ''
   showEditDialog.value = true
 }
 
 async function saveEdit() {
   try {
     await formRef.value.validate()
-    await request.put(`/communities/${editForm.id}/`, {
+    const data = {
       name: editForm.name,
       address: editForm.address,
       contact_person: editForm.contact_person,
       contact_phone: editForm.contact_phone,
-    })
-    ElMessage.success('修改成功')
+      description: editForm.description || '',
+    }
+    
+    if (isAddMode.value) {
+      await request.post('/communities/', data)
+      ElMessage.success('添加成功')
+    } else {
+      await request.put(`/communities/${editForm.id}/`, data)
+      ElMessage.success('修改成功')
+    }
+    
     showEditDialog.value = false
     loadData()
   } catch (error) {
-    if (error !== false) { // 不是表单验证错误
-      ElMessage.error('修改失败，请重试')
+    if (error !== false) {
+      ElMessage.error(isAddMode.value ? '添加失败，请重试' : '修改失败，请重试')
     }
   }
 }
