@@ -1,0 +1,75 @@
+version: '3.8'
+
+services:
+  db:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: elderlycare123
+      MYSQL_DATABASE: elderlycare
+      MYSQL_CHARACTER_SET_SERVER: utf8mb4
+      MYSQL_COLLATION_SERVER: utf8mb4_unicode_ci
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  backend:
+    build: ./backend
+    environment:
+      - DJANGO_DEBUG=False
+      - DB_ENGINE=django.db.backends.mysql
+      - DB_NAME=elderlycare
+      - DB_USER=root
+      - DB_PASSWORD=elderlycare123
+      - DB_HOST=db
+      - DB_PORT=3306
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+      - DJANGO_ALLOWED_HOSTS=*
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py init_data &&
+             gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 3"
+
+  celery:
+    build: ./backend
+    environment:
+      - DB_ENGINE=django.db.backends.mysql
+      - DB_NAME=elderlycare
+      - DB_USER=root
+      - DB_PASSWORD=elderlycare123
+      - DB_HOST=db
+      - DB_PORT=3306
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+    depends_on:
+      - backend
+      - redis
+    command: celery -A config worker -l info
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
+volumes:
+  mysql_data:
