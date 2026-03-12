@@ -1,6 +1,6 @@
 from datetime import date
 from rest_framework import viewsets, status
-from rest_framework.decorators import action
+from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
 from django.conf import settings
 from .models import DailyHealth
@@ -13,6 +13,11 @@ class DailyHealthViewSet(viewsets.ModelViewSet):
     serializer_class = DailyHealthSerializer
     filterset_fields = ['elder', 'date', 'elder__community']
     ordering_fields = ['date', 'submitted_at']
+
+    @action(detail=False, methods=['get'], url_path='thresholds')
+    def get_thresholds(self, request):
+        """获取健康指标阈值"""
+        return Response(settings.HEALTH_THRESHOLDS)
 
     @action(detail=False, methods=['post'], url_path='submit')
     def submit_today(self, request):
@@ -67,9 +72,22 @@ class DailyHealthViewSet(viewsets.ModelViewSet):
         records = DailyHealth.objects.filter(elder_id=elder_id).order_by('-date')[:30]
         return Response(DailyHealthSerializer(records, many=True).data)
 
+    @action(detail=False, methods=['get'], url_path='my-today')
+    def my_today(self, request):
+        """老人端：获取今日健康数据"""
+        user = request.user
+        if not user.elder_profile:
+            return Response({'detail': '未关联老人档案'}, status=status.HTTP_400_BAD_REQUEST)
+        today = date.today()
+        record = DailyHealth.objects.filter(elder=user.elder_profile, date=today).first()
+        if record:
+            serializer = DailyHealthSerializer(record)
+            return Response({'data': serializer.data})
+        return Response({'data': None})
+
     @action(detail=False, methods=['get'], url_path='my-history')
     def my_history(self, request):
-        """老人端：查看自己的健康数据"""
+        """老人端：查看自己的健康数据历史"""
         user = request.user
         if not user.elder_profile:
             return Response([])

@@ -96,14 +96,15 @@
 <script setup>
 import { ref, reactive, onMounted, computed } from 'vue'
 import request from '@/utils/request'
+import { ChatDotRound, CircleCheck, Warning, Aim, WindPower, TrendCharts, Sunny, IceCreamSquare, ChatLineRound } from '@element-plus/icons-vue'
 
 const elderName = ref('')
 const submitted = ref(false)
 const submitting = ref(false)
 const anomalies = ref([])
 const form = reactive({
-  heart_rate: '', blood_oxygen: '', systolic_bp: '', diastolic_bp: '',
-  temperature: '', blood_sugar: '', feeling: '',
+  heart_rate: null, blood_oxygen: null, systolic_bp: null, diastolic_bp: null,
+  temperature: null, blood_sugar: null, feeling: '',
 })
 
 const todayText = computed(() => {
@@ -119,37 +120,87 @@ const aiMessage = computed(() => {
   return '下午好！记得测量心跳、血氧、血压后填写提交'
 })
 
+// 加载当前老人今日健康数据
+async function loadTodayHealth() {
+  try {
+    const user = await request.get('/auth/users/me/')
+    elderName.value = user.name || '用户'
+    
+    if (user.elder_profile?.id) {
+      const res = await request.get(`/health/today/my-history/`)
+      if (res && res.data) { // 如果今天有数据
+        Object.assign(form, {
+          heart_rate: res.data.heart_rate,
+          blood_oxygen: res.data.blood_oxygen,
+          systolic_bp: res.data.systolic_bp,
+          diastolic_bp: res.data.diastolic_bp,
+          temperature: res.data.temperature,
+          blood_sugar: res.data.blood_sugar,
+          feeling: res.data.feeling,
+        })
+        anomalies.value = res.data.anomalies || []
+        submitted.value = true
+      } else {
+        // 今天没有数据，清空表单
+        Object.assign(form, {
+          heart_rate: null, blood_oxygen: null, systolic_bp: null, diastolic_bp: null,
+          temperature: null, blood_sugar: null, feeling: '',
+        })
+        anomalies.value = []
+        submitted.value = false
+      }
+    } else {
+      // 没有关联老人档案，清空表单并显示未提交状态
+      Object.assign(form, {
+        heart_rate: null, blood_oxygen: null, systolic_bp: null, diastolic_bp: null,
+        temperature: null, blood_sugar: null, feeling: '',
+      })
+      anomalies.value = []
+      submitted.value = false
+    }
+  } catch (e) {
+    console.error('加载今日健康数据失败:', e)
+    // 即使失败也清空表单并显示未提交状态
+    Object.assign(form, {
+      heart_rate: null, blood_oxygen: null, systolic_bp: null, diastolic_bp: null,
+      temperature: null, blood_sugar: null, feeling: '',
+    })
+    anomalies.value = []
+    submitted.value = false
+  }
+}
+
 async function submitData() {
-  if (!form.heart_rate && !form.blood_oxygen && !form.systolic_bp) {
-    alert('请至少填写一项数据')
+  if (!form.heart_rate && !form.blood_oxygen && !form.systolic_bp && !form.diastolic_bp && !form.temperature && !form.blood_sugar) {
+    alert('请至少填写一项核心数据')
     return
   }
   submitting.value = true
   try {
     const payload = {}
-    if (form.heart_rate) payload.heart_rate = Number(form.heart_rate)
-    if (form.blood_oxygen) payload.blood_oxygen = Number(form.blood_oxygen)
-    if (form.systolic_bp) payload.systolic_bp = Number(form.systolic_bp)
-    if (form.diastolic_bp) payload.diastolic_bp = Number(form.diastolic_bp)
-    if (form.temperature) payload.temperature = Number(form.temperature)
-    if (form.blood_sugar) payload.blood_sugar = Number(form.blood_sugar)
+    // 只添加非空的字段
+    if (form.heart_rate !== null) payload.heart_rate = Number(form.heart_rate)
+    if (form.blood_oxygen !== null) payload.blood_oxygen = Number(form.blood_oxygen)
+    if (form.systolic_bp !== null) payload.systolic_bp = Number(form.systolic_bp)
+    if (form.diastolic_bp !== null) payload.diastolic_bp = Number(form.diastolic_bp)
+    if (form.temperature !== null) payload.temperature = Number(form.temperature)
+    if (form.blood_sugar !== null) payload.blood_sugar = Number(form.blood_sugar)
     if (form.feeling) payload.feeling = form.feeling
 
     const res = await request.post('/health/submit/', payload)
     anomalies.value = res.anomalies || []
     submitted.value = true
+    alert('提交成功！')
   } catch (e) {
+    console.error('提交失败:', e)
     alert('提交失败，请重试')
   } finally {
     submitting.value = false
   }
 }
 
-onMounted(async () => {
-  try {
-    const user = await request.get('/auth/users/me/')
-    elderName.value = user.name || '用户'
-  } catch {}
+onMounted(() => {
+  loadTodayHealth()
 })
 </script>
 

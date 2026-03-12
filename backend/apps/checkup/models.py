@@ -15,7 +15,8 @@ class Checkup(models.Model):
     # 基本体检项目
     height = models.DecimalField('身高(cm)', max_digits=5, decimal_places=1, null=True, blank=True)
     weight = models.DecimalField('体重(kg)', max_digits=5, decimal_places=1, null=True, blank=True)
-    blood_pressure = models.CharField('血压', max_length=32, blank=True, default='')
+    systolic_bp = models.IntegerField('收缩压', null=True, blank=True)
+    diastolic_bp = models.IntegerField('舒张压', null=True, blank=True)
     heart_rate = models.IntegerField('心率', null=True, blank=True)
     blood_sugar = models.DecimalField('血糖(mmol/L)', max_digits=5, decimal_places=1, null=True, blank=True)
     blood_lipid = models.CharField('血脂', max_length=64, blank=True, default='')
