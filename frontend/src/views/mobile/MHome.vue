@@ -88,13 +88,21 @@
     <div class="form-card submitted-card" v-else>
       <el-icon :size="48" color="#34c759" style="margin-bottom: 12px;"><CircleCheck /></el-icon>
       <p class="success-text">今日数据已成功提交</p>
+      <div class="submitted-info">
+        <p><strong>心跳:</strong> {{ form.heart_rate || '-' }} 次/分钟</p>
+        <p><strong>血氧:</strong> {{ form.blood_oxygen || '-' }} %</p>
+        <p><strong>血压:</strong> {{ form.systolic_bp || '-' }}/{{ form.diastolic_bp || '-' }} mmHg</p>
+        <p><strong>体温:</strong> {{ form.temperature || '-' }} ℃</p>
+        <p v-if="form.blood_sugar"><strong>血糖:</strong> {{ form.blood_sugar }} mmol/L</p>
+        <p v-if="form.feeling"><strong>感觉:</strong> {{ form.feeling }}</p>
+      </div>
       <button class="edit-btn" @click="submitted = false">修改今日数据</button>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, reactive, onMounted, computed, onActivated } from 'vue'
 import request from '@/utils/request'
 import { ChatDotRound, CircleCheck, Warning, Aim, WindPower, TrendCharts, Sunny, IceCreamSquare, ChatLineRound } from '@element-plus/icons-vue'
 
@@ -126,38 +134,29 @@ async function loadTodayHealth() {
     const user = await request.get('/auth/users/me/')
     elderName.value = user.name || '用户'
     
-      if (user.elder_profile?.id) {
-        const res = await request.get(`/health/my-today/`)
-        if (res && res.data) { // 如果今天有数据
-          Object.assign(form, {
-            heart_rate: res.data.heart_rate,
-            blood_oxygen: res.data.blood_oxygen,
-            systolic_bp: res.data.systolic_bp,
-            diastolic_bp: res.data.diastolic_bp,
-            temperature: res.data.temperature,
-            blood_sugar: res.data.blood_sugar,
-            feeling: res.data.feeling,
-          })
-          anomalies.value = res.data.anomalies || []
-          submitted.value = true
-        } else {
-          // 今天没有数据，清空表单
-          Object.assign(form, {
-            heart_rate: null, blood_oxygen: null, systolic_bp: null, diastolic_bp: null,
-            temperature: null, blood_sugar: null, feeling: '',
-          })
-          anomalies.value = []
-          submitted.value = false
-        }
-      } else {
-        // 没有关联老人档案，清空表单并显示未提交状态
-        Object.assign(form, {
-          heart_rate: null, blood_oxygen: null, systolic_bp: null, diastolic_bp: null,
-          temperature: null, blood_sugar: null, feeling: '',
-        })
-        anomalies.value = []
-        submitted.value = false
-      }
+    // 无论是否关联档案，都尝试获取今日健康数据
+    const res = await request.get(`/health/my-today/`)
+    if (res && res.data) { // 如果今天有数据
+      Object.assign(form, {
+        heart_rate: res.data.heart_rate,
+        blood_oxygen: res.data.blood_oxygen,
+        systolic_bp: res.data.systolic_bp,
+        diastolic_bp: res.data.diastolic_bp,
+        temperature: res.data.temperature,
+        blood_sugar: res.data.blood_sugar,
+        feeling: res.data.feeling,
+      })
+      anomalies.value = res.data.anomalies || []
+      submitted.value = true
+    } else {
+      // 今天没有数据，清空表单
+      Object.assign(form, {
+        heart_rate: null, blood_oxygen: null, systolic_bp: null, diastolic_bp: null,
+        temperature: null, blood_sugar: null, feeling: '',
+      })
+      anomalies.value = []
+      submitted.value = false
+    }
   } catch (e) {
     console.error('加载今日健康数据失败:', e)
     // 即使失败也清空表单并显示未提交状态
@@ -191,6 +190,7 @@ async function submitData() {
     anomalies.value = res.anomalies || []
     submitted.value = true
     alert('提交成功！')
+    await loadTodayHealth() // 提交成功后重新加载数据，确保显示最新状态
   } catch (e) {
     console.error('提交失败:', e)
     alert('提交失败，请重试')
@@ -199,7 +199,8 @@ async function submitData() {
   }
 }
 
-onMounted(() => {
+// 将onMounted替换为onActivated
+onActivated(() => {
   loadTodayHealth()
 })
 </script>
@@ -400,6 +401,27 @@ onMounted(() => {
   color: #1d1d1f;
   margin: 0 0 20px;
   font-weight: 600;
+}
+
+.submitted-info {
+  text-align: left;
+  margin: 24px 0;
+  padding: 20px;
+  background: #f5f5f7;
+  border-radius: 12px;
+  
+  p {
+    margin: 8px 0;
+    font-size: 15px;
+    color: #1d1d1f;
+    line-height: 1.6;
+    
+    strong {
+      font-weight: 600;
+      color: #0066cc;
+      margin-right: 8px;
+    }
+  }
 }
 
 .edit-btn {

@@ -1,6 +1,6 @@
 <template>
   <div class="m-app">
-    <router-view />
+    <router-view :key="$route.fullPath" />
     <nav class="m-tab">
       <router-link to="/m/home" class="tab-item" active-class="active">
         <el-icon :size="24"><EditPen /></el-icon>
