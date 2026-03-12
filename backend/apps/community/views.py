@@ -1,7 +1,8 @@
-from rest_framework import viewsets
+from rest_framework import viewsets, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.db.models import Count, Q
+from django_filters.rest_framework import DjangoFilterBackend
 from .models import Community
 from .serializers import CommunitySerializer
 
@@ -12,4 +13,6 @@ class CommunityViewSet(viewsets.ModelViewSet):
         elder_count=Count('elders', filter=Q(elders__is_active=True))
     )
     serializer_class = CommunitySerializer
-    search_fields = ['name', 'address']
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    filterset_fields = ['is_active']
+    search_fields = ['name', 'address', 'contact_person']

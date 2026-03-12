@@ -4,12 +4,23 @@
     <div style="margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center;">
       <div style="display: flex; align-items: center; gap: 16px;">
         <h2 style="margin: 0; font-size: 24px; font-weight: 700; color: #1d1d1f;">社区管理</h2>
-        <el-radio-group v-model="statusFilter" size="default">
+        <el-input
+          v-model="searchQuery"
+          placeholder="搜索社区名称、地址、负责人"
+          clearable
+          style="width: 250px;"
+          @input="loadData"
+        >
+          <template #prefix>
+            <el-icon><Search /></el-icon>
+          </template>
+        </el-input>
+        <el-radio-group v-model="statusFilter" size="default" @change="loadData">
           <el-radio-button label="all">全部</el-radio-button>
           <el-radio-button label="active">在用</el-radio-button>
           <el-radio-button label="inactive">停用</el-radio-button>
         </el-radio-group>
-        <el-tag type="info">共 {{ filteredCommunities.length }} 个社区</el-tag>
+        <el-tag type="info">共 {{ communities.length }} 个社区</el-tag>
       </div>
       <el-button type="primary" @click="openAddDialog">
         <el-icon><Plus /></el-icon>
@@ -102,11 +113,12 @@
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { Plus } from '@element-plus/icons-vue'
+import { Plus, Search } from '@element-plus/icons-vue'
 import request from '@/utils/request'
 
 const communities = ref([])
 const statusFilter = ref('all')
+const searchQuery = ref('') // 新增搜索查询变量
 const showEditDialog = ref(false)
 const isAddMode = ref(false)
 const formRef = ref()
@@ -121,14 +133,34 @@ const editForm = reactive({
 })
 
 const filteredCommunities = computed(() => {
-  if (statusFilter.value === 'all') return communities.value
-  if (statusFilter.value === 'active') return communities.value.filter(c => c.is_active)
-  if (statusFilter.value === 'inactive') return communities.value.filter(c => !c.is_active)
-  return communities.value
+  let filtered = communities.value
+  
+  // 状态筛选
+  if (statusFilter.value === 'active') {
+    filtered = filtered.filter(c => c.is_active)
+  } else if (statusFilter.value === 'inactive') {
+    filtered = filtered.filter(c => !c.is_active)
+  }
+  
+  // 搜索筛选 (目前在loadData中实现，这里保留以防万一或作为本地过滤备用)
+  // if (searchQuery.value) {
+  //   const query = searchQuery.value.toLowerCase()
+  //   filtered = filtered.filter(c => 
+  //     c.name.toLowerCase().includes(query) ||
+  //     c.address.toLowerCase().includes(query) ||
+  //     c.contact_person.toLowerCase().includes(query)
+  //   )
+  // }
+  
+  return filtered
 })
 
 async function loadData() {
-  const res = await request.get('/communities/')
+  const params = {
+    search: searchQuery.value, // 将搜索查询参数传递给后端
+    is_active: statusFilter.value === 'all' ? undefined : statusFilter.value === 'active' // 将状态筛选参数传递给后端
+  }
+  const res = await request.get('/communities/', { params })
   communities.value = res.results || res
 }
 
