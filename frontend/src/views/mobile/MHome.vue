@@ -126,22 +126,31 @@ async function loadTodayHealth() {
     const user = await request.get('/auth/users/me/')
     elderName.value = user.name || '用户'
     
-    if (user.elder_profile?.id) {
-      const res = await request.get(`/health/today/my-history/`)
-      if (res && res.data) { // 如果今天有数据
-        Object.assign(form, {
-          heart_rate: res.data.heart_rate,
-          blood_oxygen: res.data.blood_oxygen,
-          systolic_bp: res.data.systolic_bp,
-          diastolic_bp: res.data.diastolic_bp,
-          temperature: res.data.temperature,
-          blood_sugar: res.data.blood_sugar,
-          feeling: res.data.feeling,
-        })
-        anomalies.value = res.data.anomalies || []
-        submitted.value = true
+      if (user.elder_profile?.id) {
+        const res = await request.get(`/health/my-today/`)
+        if (res && res.data) { // 如果今天有数据
+          Object.assign(form, {
+            heart_rate: res.data.heart_rate,
+            blood_oxygen: res.data.blood_oxygen,
+            systolic_bp: res.data.systolic_bp,
+            diastolic_bp: res.data.diastolic_bp,
+            temperature: res.data.temperature,
+            blood_sugar: res.data.blood_sugar,
+            feeling: res.data.feeling,
+          })
+          anomalies.value = res.data.anomalies || []
+          submitted.value = true
+        } else {
+          // 今天没有数据，清空表单
+          Object.assign(form, {
+            heart_rate: null, blood_oxygen: null, systolic_bp: null, diastolic_bp: null,
+            temperature: null, blood_sugar: null, feeling: '',
+          })
+          anomalies.value = []
+          submitted.value = false
+        }
       } else {
-        // 今天没有数据，清空表单
+        // 没有关联老人档案，清空表单并显示未提交状态
         Object.assign(form, {
           heart_rate: null, blood_oxygen: null, systolic_bp: null, diastolic_bp: null,
           temperature: null, blood_sugar: null, feeling: '',
@@ -149,15 +158,6 @@ async function loadTodayHealth() {
         anomalies.value = []
         submitted.value = false
       }
-    } else {
-      // 没有关联老人档案，清空表单并显示未提交状态
-      Object.assign(form, {
-        heart_rate: null, blood_oxygen: null, systolic_bp: null, diastolic_bp: null,
-        temperature: null, blood_sugar: null, feeling: '',
-      })
-      anomalies.value = []
-      submitted.value = false
-    }
   } catch (e) {
     console.error('加载今日健康数据失败:', e)
     // 即使失败也清空表单并显示未提交状态
