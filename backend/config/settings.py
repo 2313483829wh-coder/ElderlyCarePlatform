@@ -29,6 +29,7 @@ INSTALLED_APPS = [
     'apps.health',
     'apps.checkup',
     'apps.alerts',
+    'apps.ai',
 ]
 
 MIDDLEWARE = [
@@ -139,3 +140,6 @@ HEALTH_THRESHOLDS = {
     'blood_sugar_min': 3.9,    # 低于3.9 mmol/L为低血糖
     'blood_sugar_max': 6.1,    # 高于6.1 mmol/L为空腹血糖受损（7.0以上为糖尿病）
 }
+
+# DeepSeek API（生产环境建议用环境变量 DEEPSEEK_API_KEY）
+DEEPSEEK_API_KEY = os.environ.get('DEEPSEEK_API_KEY', 'sk-6fd4968ae1e7494190e42fe2b6871edf')

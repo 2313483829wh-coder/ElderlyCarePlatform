@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { Capacitor } from '@capacitor/core'
 
 const routes = [
   {
@@ -49,19 +50,24 @@ const routes = [
     ],
   },
   {
-    path: '/m/login',
-    component: () => import('@/views/mobile/MLogin.vue'),
-    meta: { title: '老人登录' },
-  },
-  {
     path: '/m',
     component: () => import('@/views/mobile/MLayout.vue'),
-    redirect: '/m/home',
+    redirect: '/m/chat',
     children: [
       {
-        path: 'home',
-        component: () => import('@/views/mobile/MHome.vue'),
+        path: 'chat',
+        component: () => import('@/views/mobile/MChat.vue'),
         meta: { title: '健康助手' },
+      },
+      {
+        path: 'settings',
+        component: () => import('@/views/mobile/MPerson.vue'),
+        meta: { title: '设置' },
+      },
+      {
+        path: 'account',
+        component: () => import('@/views/mobile/MAccount.vue'),
+        meta: { title: '账号管理' },
       },
       {
         path: 'history',
@@ -80,12 +86,18 @@ const routes = [
 const router = createRouter({ history: createWebHistory(), routes })
 
 router.beforeEach((to, from, next) => {
+  // 老人端 App：打开时直接进入 /m/chat
+  if (to.path === '/' && Capacitor.isNativePlatform()) {
+    next('/m/chat')
+    return
+  }
   document.title = `${to.meta.title || ''} - 社区养老管理平台`
   const isMobile = to.path.startsWith('/m')
-  const loginPath = isMobile ? '/m/login' : '/login'
+  const loginPath = isMobile ? '/m/settings' : '/login'
   const tokenKey = isMobile ? 'elder_token' : 'token'
   
-  if (to.path === '/login' || to.path === '/m/login') {
+  // 老人端：允许游客进入对话页、设置、账号管理
+  if (to.path === '/login' || to.path === '/m/settings' || to.path === '/m/chat' || to.path === '/m/account') {
     next()
   } else if (!localStorage.getItem(tokenKey)) {
     next(loginPath)

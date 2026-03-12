@@ -199,8 +199,8 @@ async function submitData() {
   }
 }
 
-// 将onMounted替换为onActivated
-onActivated(() => {
+// 每次进入页面都加载今日数据（无 keep-alive 时切换标签会销毁重建组件，需用 onMounted）
+onMounted(() => {
   loadTodayHealth()
 })
 </script>

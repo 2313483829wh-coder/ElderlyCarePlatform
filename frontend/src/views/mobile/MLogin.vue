@@ -43,7 +43,7 @@ async function onLogin() {
     const res = await request.post('/auth/login/', form)
     localStorage.setItem('elder_token', res.access)
     localStorage.setItem('token', res.access)
-    router.push('/m/home')
+    router.push('/m/chat')
   } catch {
     alert('身份证号或密码错误')
   } finally {

@@ -8,6 +8,7 @@ from .models import Elder
 from .serializers import (
     ElderSerializer, ElderSimpleSerializer,
     UserSerializer, UserCreateSerializer,
+    ElderRegisterSerializer,
 )
 
 User = get_user_model()
@@ -26,6 +27,30 @@ class UserViewSet(viewsets.ModelViewSet):
     def me(self, request):
         ser = UserSerializer(request.user)
         return Response(ser.data)
+
+    @action(detail=False, methods=['patch'], url_path='update-phone')
+    def update_phone(self, request):
+        """老人端：修改当前用户手机号"""
+        phone = (request.data.get('phone') or '').strip()
+        if not phone:
+            return Response({'phone': ['手机号不能为空']}, status=status.HTTP_400_BAD_REQUEST)
+        if len(phone) != 11 or not phone.isdigit():
+            return Response({'phone': ['请输入正确的11位手机号']}, status=status.HTTP_400_BAD_REQUEST)
+        user = request.user
+        user.phone = phone
+        user.save()
+        if user.elder_profile:
+            user.elder_profile.phone = phone
+            user.elder_profile.save()
+        return Response({'message': '修改成功', 'phone': phone})
+
+    @action(detail=False, methods=['post'], permission_classes=[AllowAny], url_path='elder-register')
+    def elder_register(self, request):
+        """老人端：注册（社区 + 身份证 + 密码）"""
+        ser = ElderRegisterSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        user = ser.save()
+        return Response({'message': '注册成功', 'username': user.username}, status=status.HTTP_201_CREATED)
 
 
 class ElderViewSet(viewsets.ModelViewSet):

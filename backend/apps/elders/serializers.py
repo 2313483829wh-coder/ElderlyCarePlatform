@@ -74,3 +74,98 @@ class ElderSimpleSerializer(serializers.ModelSerializer):
     class Meta:
         model = Elder
         fields = ['id', 'name', 'gender', 'age', 'community_name', 'phone']
+
+
+class ElderRegisterSerializer(serializers.Serializer):
+    """老人端注册：选择社区 + 身份证 + 密码"""
+    community_id = serializers.IntegerField()
+    name = serializers.CharField(max_length=64)
+    phone = serializers.CharField(max_length=20)
+    id_card = serializers.CharField(max_length=18, min_length=15)
+    password = serializers.CharField(min_length=6, write_only=True)
+
+    def validate_name(self, v):
+        v = (v or '').strip()
+        if not v:
+            raise serializers.ValidationError('姓名不能为空')
+        return v
+
+    def validate_id_card(self, v):
+        v = (v or '').strip()
+        if len(v) not in (15, 18):
+            raise serializers.ValidationError('身份证长度不正确')
+        return v
+
+    def validate_phone(self, v):
+        v = (v or '').strip()
+        if not v:
+            raise serializers.ValidationError('电话号码不能为空')
+        # 简单校验：中国大陆手机号 11 位；如果你后面要支持座机/港澳台可放宽
+        if v.isdigit() and len(v) == 11:
+            return v
+        # 允许包含 + - 空格 的国际号码形式
+        ok_chars = set('0123456789+- ')
+        if any(ch not in ok_chars for ch in v):
+            raise serializers.ValidationError('电话号码格式不正确')
+        return v
+
+    def create(self, validated_data):
+        from datetime import date
+        from apps.community.models import Community
+
+        community_id = validated_data['community_id']
+        name = validated_data['name']
+        phone = validated_data['phone']
+        id_card = validated_data['id_card']
+        password = validated_data['password']
+
+        if User.objects.filter(username=id_card).exists():
+            raise serializers.ValidationError({'id_card': '该身份证号已注册'})
+        if Elder.objects.filter(id_card=id_card).exists():
+            raise serializers.ValidationError({'id_card': '该身份证号已存在老人档案'})
+
+        community = Community.objects.filter(id=community_id, is_active=True).first()
+        if not community:
+            raise serializers.ValidationError({'community_id': '社区不存在或已停用'})
+
+        # 从身份证解析生日与性别（18位：YYYYMMDD + 第17位奇男偶女；15位按 19YY 处理）
+        gender = 'M'
+        birth = date(1950, 1, 1)
+        try:
+            if len(id_card) == 18:
+                birth_str = id_card[6:14]
+                birth = date(int(birth_str[0:4]), int(birth_str[4:6]), int(birth_str[6:8]))
+                gender = 'M' if int(id_card[16]) % 2 == 1 else 'F'
+            else:
+                birth_str = '19' + id_card[6:12]
+                birth = date(int(birth_str[0:4]), int(birth_str[4:6]), int(birth_str[6:8]))
+                gender = 'M' if int(id_card[14]) % 2 == 1 else 'F'
+        except Exception:
+            # 解析失败使用默认值
+            pass
+
+        elder = Elder.objects.create(
+            community=community,
+            name=name,
+            gender=gender,
+            birth_date=birth,
+            id_card=id_card,
+            phone=phone,
+            address='',
+            emergency_contact='',
+            emergency_phone='',
+            medical_history='',
+            notes='',
+            is_active=True,
+        )
+
+        user = User(
+            username=id_card,
+            role='elder',
+            name=name,
+            phone=phone,
+            elder_profile=elder,
+        )
+        user.set_password(password)
+        user.save()
+        return user
