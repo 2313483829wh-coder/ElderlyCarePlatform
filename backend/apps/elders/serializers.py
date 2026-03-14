@@ -1,8 +1,26 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from .models import Elder
 
 User = get_user_model()
+
+
+class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
+    """登录时校验：已停用社区的账号禁止登录"""
+
+    def validate(self, attrs):
+        data = super().validate(attrs)
+        user = self.user
+        elder = getattr(user, 'elder_profile', None)
+        if elder:
+            from apps.community.models import Community
+            community = Community.objects.filter(pk=elder.community_id).first()
+            if community and not community.is_active:
+                raise serializers.ValidationError(
+                    {'detail': '该账号所属社区已停用，无法登录。如有疑问请联系管理员。'}
+                )
+        return data
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -33,10 +51,39 @@ class ElderSerializer(serializers.ModelSerializer):
     today_health = serializers.SerializerMethodField()
     checkup_status = serializers.SerializerMethodField()
     has_alert = serializers.SerializerMethodField()
+    login_password = serializers.CharField(write_only=True, required=False, min_length=6, max_length=128,
+                                          help_text='老人端登录密码（用户名=身份证号），留空则不创建/修改账号')
 
     class Meta:
         model = Elder
         fields = '__all__'
+
+    def _ensure_user_for_elder(self, elder, password):
+        if not password or not elder.id_card:
+            return
+        user, created = User.objects.get_or_create(
+            username=elder.id_card,
+            defaults={'name': elder.name, 'phone': elder.phone or '', 'role': 'elder', 'elder_profile': elder}
+        )
+        if user.elder_profile_id != elder.id:
+            user.elder_profile = elder
+            user.name = elder.name
+            user.phone = elder.phone or ''
+            user.save(update_fields=['elder_profile_id', 'name', 'phone'])
+        user.set_password(password)
+        user.save()
+
+    def create(self, validated_data):
+        login_password = validated_data.pop('login_password', None)
+        elder = super().create(validated_data)
+        self._ensure_user_for_elder(elder, login_password)
+        return elder
+
+    def update(self, instance, validated_data):
+        login_password = validated_data.pop('login_password', None)
+        elder = super().update(instance, validated_data)
+        self._ensure_user_for_elder(elder, login_password)
+        return elder
 
     def get_today_health(self, obj):
         from datetime import date

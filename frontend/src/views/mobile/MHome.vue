@@ -192,8 +192,18 @@ async function submitData() {
     alert('提交成功！')
     await loadTodayHealth() // 提交成功后重新加载数据，确保显示最新状态
   } catch (e) {
-    console.error('提交失败:', e)
-    alert('提交失败，请重试')
+    if (e?.response?.data?.invalid) {
+      form.heart_rate = null
+      form.blood_oxygen = null
+      form.systolic_bp = null
+      form.diastolic_bp = null
+      form.temperature = null
+      form.blood_sugar = null
+      form.feeling = ''
+    } else {
+      console.error('提交失败:', e)
+      alert('提交失败，请重试')
+    }
   } finally {
     submitting.value = false
   }

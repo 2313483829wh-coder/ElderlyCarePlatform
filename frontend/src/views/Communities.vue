@@ -117,7 +117,7 @@ import { Plus, Search } from '@element-plus/icons-vue'
 import request from '@/utils/request'
 
 const communities = ref([])
-const statusFilter = ref('all')
+const statusFilter = ref('active')
 const searchQuery = ref('') // 新增搜索查询变量
 const showEditDialog = ref(false)
 const isAddMode = ref(false)

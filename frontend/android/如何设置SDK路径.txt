@@ -1,0 +1,16 @@
+若打包 APK 时报错「SDK location not found」，按下面步骤设置：
+
+1. 打开 Android Studio
+2. 菜单 File → Settings（首次打开可能是 Configure → Settings）
+3. 左侧选：Appearance & Behavior → System Settings → Android SDK
+4. 页面右上角「Android SDK Location」后面就是你的 SDK 路径，复制它
+   例如：C:\Users\你的用户名\AppData\Local\Android\Sdk
+   或：D:\Android\Sdk（若你当时选过别的盘）
+5. 用记事本打开本目录下的 local.properties
+6. 把 sdk.dir= 后面的路径改成你复制的路径
+   - 注意：路径里的每个反斜杠 \ 要写成两个 \\ 
+   - 例如：sdk.dir=C\:\\Users\\你的用户名\\AppData\\Local\\Android\\Sdk
+7. 保存后重新在 frontend 目录执行：npm run apk
+
+也可以不改 local.properties，改为设置系统环境变量 ANDROID_HOME：
+- 值就是你复制的 SDK 路径（正常写一个 \ 即可）

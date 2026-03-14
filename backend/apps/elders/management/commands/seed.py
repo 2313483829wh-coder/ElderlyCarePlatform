@@ -68,17 +68,21 @@ class Command(BaseCommand):
             )
             elders.append(elder)
 
-            if created:
-                # 使用身份证号作为用户名，密码统一为123
-                user, _ = User.objects.get_or_create(
-                    username=id_card,
-                    defaults={
-                        'name': name, 'phone': elder.phone,
-                        'role': 'elder', 'elder_profile': elder,
-                    }
-                )
-                user.set_password('123')
-                user.save()
+            # 确保该老人有登录账号：用户名=身份证号，密码=123（每次 seed 都同步）
+            user, _ = User.objects.get_or_create(
+                username=elder.id_card,
+                defaults={
+                    'name': elder.name, 'phone': elder.phone,
+                    'role': 'elder', 'elder_profile': elder,
+                }
+            )
+            if user.elder_profile_id != elder.id:
+                user.elder_profile = elder
+                user.name = name
+                user.phone = elder.phone
+                user.save(update_fields=['elder_profile_id', 'name', 'phone'])
+            user.set_password('123')
+            user.save()
 
         self.stdout.write(f'  {len(elders)} 位老人创建完成')
 

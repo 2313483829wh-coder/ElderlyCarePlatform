@@ -27,6 +27,7 @@
 <script setup>
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
 import request from '@/utils/request'
 
 const router = useRouter()
@@ -44,8 +45,10 @@ async function onLogin() {
     localStorage.setItem('elder_token', res.access)
     localStorage.setItem('token', res.access)
     router.push('/m/chat')
-  } catch {
-    alert('身份证号或密码错误')
+  } catch (e) {
+    const d = e.response?.data?.detail
+    const msg = typeof d === 'string' ? d : Array.isArray(d) ? d[0] : null
+    ElMessage.error(msg || '账户不存在或密码错误')
   } finally {
     loading.value = false
   }

@@ -81,10 +81,11 @@
       <input
         v-model="inputText"
         type="text"
-        placeholder="输入消息，与 AI 交流..."
+        :placeholder="guestLimitReached ? '游客仅可对话 3 条，请登录后继续' : '输入消息，与 AI 交流...'"
+        :disabled="guestLimitReached"
         @keydown.enter.exact.prevent="send"
       />
-      <button class="send-btn" :disabled="!inputText.trim() || sending" @click="send">
+      <button class="send-btn" :disabled="!inputText.trim() || sending || guestLimitReached" @click="send">
         <el-icon :size="20"><Promotion /></el-icon>
       </button>
     </div>
@@ -113,6 +114,13 @@ const isAuthed = inject('isAuthed', ref(!!localStorage.getItem('elder_token')))
 
 const refreshSessions = inject('refreshSessions', () => {})
 const setCurrentSession = inject('setCurrentSession', () => {})
+
+const guestUserMessageCount = computed(() =>
+  messages.value.filter(m => m.role === 'user').length
+)
+const guestLimitReached = computed(() =>
+  !isAuthed.value && guestUserMessageCount.value >= 3
+)
 
 const form = reactive({
   heart_rate: null, blood_oxygen: null, systolic_bp: null, diastolic_bp: null,
@@ -210,7 +218,17 @@ async function submitHealth() {
       await sendToAI(summary)
     }
   } catch (e) {
-    alert('提交失败，请重试')
+    if (e?.response?.data?.invalid) {
+      form.heart_rate = null
+      form.blood_oxygen = null
+      form.systolic_bp = null
+      form.diastolic_bp = null
+      form.temperature = null
+      form.blood_sugar = null
+      form.feeling = ''
+    } else {
+      alert('提交失败，请重试')
+    }
   } finally {
     submitting.value = false
   }
@@ -301,6 +319,7 @@ async function sendToAI(content) {
   // 游客：走匿名接口
   if (!isAuthed.value) {
     sending.value = true
+    loading.value = true
     const userContent = content
     messages.value.push({
       id: 'u' + Date.now(),
@@ -323,14 +342,17 @@ async function sendToAI(content) {
         created_at: new Date().toISOString(),
       })
     } catch (e) {
+      const detail = e.response?.data?.detail
+      const isGuestLimit = e.response?.status === 403 && typeof detail === 'string' && detail.includes('游客')
       messages.value.push({
         id: 'a' + Date.now(),
         role: 'assistant',
-        content: '抱歉，AI暂时不可用，请稍后再试。',
+        content: isGuestLimit ? (detail + ' 请到【设置 → 账号管理】登录。') : '抱歉，AI暂时不可用，请稍后再试。',
         created_at: new Date().toISOString(),
       })
     } finally {
       sending.value = false
+      loading.value = false
       scrollBottom()
     }
     return
@@ -338,6 +360,7 @@ async function sendToAI(content) {
 
   if (!sessionId.value) return
   sending.value = true
+  loading.value = true
   const userContent = content
   messages.value.push({
     id: 'u' + Date.now(),
@@ -364,6 +387,7 @@ async function sendToAI(content) {
     })
   } finally {
     sending.value = false
+    loading.value = false
     scrollBottom()
   }
 }
@@ -398,11 +422,14 @@ onMounted(async () => {
 .ds-chat {
   display: flex;
   flex-direction: column;
-  min-height: calc(100vh - 100px);
+  height: calc(100vh - 64px);
+  max-height: calc(100vh - 64px);
+  overflow: hidden;
 }
 
 .messages {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
   padding: 16px;
   background: #ffffff;
@@ -475,6 +502,7 @@ onMounted(async () => {
 }
 
 .form-area {
+  flex-shrink: 0;
   margin: 0 16px 12px;
   padding: 14px;
   background: #ffffff;
@@ -573,6 +601,7 @@ onMounted(async () => {
 }
 
 .input-area {
+  flex-shrink: 0;
   display: flex;
   gap: 10px;
   padding: 12px 16px;

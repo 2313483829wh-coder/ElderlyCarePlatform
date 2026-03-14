@@ -92,6 +92,11 @@
             {{ elder.is_active ? '在住' : '已离开' }}
           </el-tag>
         </el-descriptions-item>
+        <el-descriptions-item label="登录密码" :span="2">
+          <el-input v-if="editing" v-model="editForm.login_password" type="password" maxlength="128"
+            placeholder="留空不修改，填写则设置老人端登录密码（用户名=身份证号）" clearable show-password />
+          <span v-else style="color: #86868b;">老人端用户名=身份证号，密码在修改时可设置</span>
+        </el-descriptions-item>
       </el-descriptions>
 
       <div style="margin-top: 24px; display: flex; gap: 12px;">
@@ -140,7 +145,8 @@ function startEdit() {
     emergency_contact: elder.value.emergency_contact,
     emergency_phone: elder.value.emergency_phone,
     medical_history: elder.value.medical_history || '',
-    is_active: elder.value.is_active
+    is_active: elder.value.is_active,
+    login_password: ''
   }
 }
 
@@ -152,7 +158,9 @@ function cancelEdit() {
 async function saveEdit() {
   try {
     loading.value = true
-    await request.put(`/auth/elders/${elder.value.id}/`, editForm.value)
+    const payload = { ...editForm.value }
+    if (payload.login_password === '') delete payload.login_password
+    await request.put(`/auth/elders/${elder.value.id}/`, payload)
     ElMessage.success('修改成功')
     editing.value = false
     await loadData()

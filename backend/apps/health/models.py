@@ -34,6 +34,37 @@ class DailyHealth(models.Model):
     def __str__(self):
         return f'{self.elder.name} {self.date}'
 
+    def is_likely_invalid_submission(self):
+        """明显不合理的录入不参与预警（乱填、测试数据）"""
+        # 心率：常见乱填
+        if self.heart_rate is not None and self.heart_rate in (0, 1, 999, 1000, 9999):
+            return True
+        if self.heart_rate is not None and self.heart_rate > 250:
+            return True
+        # 血氧 0% 或 100%
+        if self.blood_oxygen is not None:
+            bo = float(self.blood_oxygen)
+            if bo == 0 or bo == 100:
+                return True
+        # 血压 0 或 999 等
+        if self.systolic_bp is not None and self.systolic_bp in (0, 999, 1000):
+            return True
+        if self.diastolic_bp is not None and self.diastolic_bp in (0, 999, 1000):
+            return True
+        if self.systolic_bp and self.diastolic_bp and self.systolic_bp < self.diastolic_bp:
+            return True
+        # 体温明显超出人体范围
+        if self.temperature is not None:
+            tmp = float(self.temperature)
+            if tmp < 35 or tmp > 42:
+                return True
+        # 血糖 0 或 >30
+        if self.blood_sugar is not None:
+            bs = float(self.blood_sugar)
+            if bs == 0 or bs > 30:
+                return True
+        return False
+
     @property
     def has_anomaly(self):
         """检查是否有异常指标（基于国际医学标准）"""

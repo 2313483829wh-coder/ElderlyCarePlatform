@@ -59,8 +59,7 @@ const handleLogout = () => {
 
 onMounted(async () => {
   try {
-    const res = await request.get('/alerts/pending/')
-    // 只统计健康异常预警
+    const res = await request.get('/alerts/pending/', { skipGlobalErrorTip: true })
     pendingAlerts.value = (res || []).filter(a => a.alert_type === 'health').length
   } catch {}
 })

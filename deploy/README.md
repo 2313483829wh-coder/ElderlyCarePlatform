@@ -1,0 +1,168 @@
+# 公网一键部署说明
+
+你只需要：**一台有公网 IP 的云服务器**（阿里云 / 腾讯云 / 华为云等），然后按下面步骤操作即可。我无法直接登录你的服务器，但已经把部署所需都准备好，你在服务器上执行几条命令就能跑起来。
+
+---
+
+## 一、你需要准备什么
+
+1. **一台云服务器**
+   - 配置建议：2 核 2G 起，系统选 **Ubuntu 22.04** 或 **CentOS 7+**。
+   - 购买后记下：**公网 IP**、**SSH 登录账号密码（或密钥）**。
+   - 在云控制台**安全组**里放行：**80**（网页和 API）、**22**（SSH）。
+
+2. **（可选）域名**
+   - 有域名可解析到该 IP，后面 App 和网页都用 `https://你的域名`；没有则先用 `http://公网IP` 也可。
+
+---
+
+## 二、在服务器上执行（一次性）
+
+用 SSH 登录到服务器后，依次执行下面命令（一行一行复制执行即可）。
+
+### 1. 安装 Docker 和 Docker Compose
+
+**Ubuntu / Debian：**
+
+```bash
+sudo apt-get update
+sudo apt-get install -y ca-certificates curl
+sudo install -m 0755 -d /etc/apt/keyrings
+sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+sudo chmod a+r /etc/apt/keyrings/docker.asc
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+sudo apt-get update
+sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
+sudo usermod -aG docker $USER
+```
+
+执行完后**退出 SSH 再重新登录一次**，再继续下面步骤。
+
+**若已安装过 Docker**，可跳过上面，直接执行：
+
+```bash
+docker --version
+docker compose version
+```
+
+有版本输出即可。
+
+### 2. 把项目放到服务器上
+
+任选一种方式：
+
+**方式 A：本机用 Git，服务器能上网**
+
+在服务器上：
+
+```bash
+cd ~
+git clone <你的仓库地址> ElderlyCarePlatform
+cd ElderlyCarePlatform
+```
+
+**方式 B：本机打包上传**
+
+在你**本地电脑**上（项目根目录）打包并上传：
+
+```bash
+# Windows PowerShell 示例（把 你的公网IP 换成实际 IP）：
+scp -r . root@你的公网IP:~/ElderlyCarePlatform
+```
+
+上传后在服务器上：
+
+```bash
+cd ~/ElderlyCarePlatform
+```
+
+### 3. 配置环境变量
+
+在服务器上、**项目根目录**（和 `docker-compose.yml` 同级）执行：
+
+```bash
+cp deploy/.env.example .env
+nano .env
+```
+
+在 `.env` 里至少改这两项：
+
+- **DJANGO_SECRET_KEY**：改成随机字符串（可用 `openssl rand -base64 48` 生成）。
+- **DJANGO_ALLOWED_HOSTS**：改成你的**公网 IP** 或域名，例如 `42.123.45.67` 或 `api.yourname.com`。
+
+保存退出（nano：Ctrl+O 回车，Ctrl+X）。
+
+### 4. 启动所有服务
+
+仍在项目根目录执行：
+
+```bash
+docker compose up -d --build
+```
+
+首次会拉镜像、构建镜像，可能要几分钟。完成后用：
+
+```bash
+docker compose ps
+```
+
+看到 backend、frontend、db、redis、celery 都是 `Up` 即表示成功。
+
+### 5. 获取 API 地址（用于打包 App）
+
+- **若用 IP 访问**：API 基地址为  
+  **`http://你的公网IP/api`**  
+  例如：`http://42.123.45.67/api`
+
+- **若用域名访问**：API 基地址为  
+  **`https://你的域名/api`**（需在服务器或前面再配一层 Nginx 做 HTTPS）
+
+在浏览器打开 `http://你的公网IP`，能看到管理端页面；打开 `http://你的公网IP/api/` 能收到接口响应或 404（说明路由正常），即表示部署成功。
+
+---
+
+## 三、打包 App 并让全国各地的人用
+
+在你**本地电脑**上：
+
+1. 在 `frontend` 目录下创建 **`.env.production`**，内容为（把地址换成上面得到的 API 地址）：
+
+   ```env
+   VITE_API_BASE=http://你的公网IP/api
+   ```
+
+   若有域名且配了 HTTPS，则用：
+
+   ```env
+   VITE_API_BASE=https://你的域名/api
+   ```
+
+2. 打包 APK：
+
+   ```bash
+   cd frontend
+   npm run apk
+   ```
+
+3. 把生成的 **app-debug.apk** 发给别人安装；对方只要有网络即可使用，不限于同一 WiFi。
+
+---
+
+## 四、常见问题
+
+- **安全组 / 防火墙**：确保云控制台里该服务器**开放 80 端口**（和 22 用于 SSH）。
+- **无法访问**：先在本机 `curl http://你的公网IP` 或浏览器访问，确认能通再在手机 App 里用该地址。
+- **重启服务**：在服务器项目根目录执行 `docker compose restart`。
+- **看日志**：`docker compose logs -f backend` 或 `docker compose logs -f frontend`。
+
+---
+
+## 五、小结
+
+| 你提供 | 我这边已准备好 |
+|--------|----------------|
+| 一台有公网 IP 的云服务器（能 SSH、开放 80） | 项目里的 Docker 配置、后端 CORS、`deploy/.env.example` |
+| 在服务器上：复制 `.env`、改两行、执行 `docker compose up -d` | 一键启动后端 + 前端 + 数据库 + Redis + Celery |
+| 本地用 API 地址打 APK 并分发 | 全国各地的人装 App 即可用 |
+
+你不需要把服务器交给我，只要按上述步骤在**你自己的服务器**上执行即可完成部署。

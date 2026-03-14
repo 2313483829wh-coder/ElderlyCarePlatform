@@ -83,11 +83,11 @@ const routes = [
   },
 ]
 
-const router = createRouter({ history: createWebHistory(), routes })
+const router = createRouter({ history: createWebHistory(import.meta.env.BASE_URL), routes })
 
 router.beforeEach((to, from, next) => {
-  // 老人端 App：打开时直接进入 /m/chat
-  if (to.path === '/' && Capacitor.isNativePlatform()) {
+  // 老人端 App / 手机端：只显示老人端，任何管理端路径都进 /m/chat
+  if (Capacitor.isNativePlatform() && !to.path.startsWith('/m')) {
     next('/m/chat')
     return
   }

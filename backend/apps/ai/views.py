@@ -6,6 +6,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
 
 from .models import ChatSession, ChatMessage
+from apps.elders.models import Elder
 
 # DeepSeek 健康助手系统提示词
 SYSTEM_PROMPT_BASE = """你是社区养老健康助手的 AI，名叫「郭泽炀」。你的职责是：
@@ -69,9 +70,21 @@ class ChatViewSet(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
 
     def _get_elder(self, request):
-        if not request.user.elder_profile:
+        """老人端：若已关联档案则返回，否则尝试按身份证号(username)自动恢复关联"""
+        user = request.user
+        if user.elder_profile:
+            return user.elder_profile
+        if getattr(user, 'role', None) != 'elder' or not (user.username or '').strip():
             return None
-        return request.user.elder_profile
+        id_card = (user.username or '').strip()
+        if len(id_card) not in (15, 18):
+            return None
+        elder = Elder.objects.filter(id_card=id_card).first()
+        if elder:
+            user.elder_profile = elder
+            user.save(update_fields=['elder_profile_id'])
+            return elder
+        return None
 
     @action(detail=False, methods=['get'], url_path='sessions')
     def list_sessions(self, request):
@@ -191,7 +204,7 @@ class ChatViewSet(viewsets.ViewSet):
 
     @action(detail=False, methods=['post'], url_path='public-chat', permission_classes=[AllowAny])
     def public_chat(self, request):
-        """游客：匿名聊天（不存会话，不上传健康数据）"""
+        """游客：匿名聊天（不存会话，不上传健康数据）；未登录仅可对话 3 条"""
         content = (request.data.get('content') or '').strip()
         history = request.data.get('history') or []
         if not content:
@@ -208,6 +221,14 @@ class ChatViewSet(viewsets.ViewSet):
                         safe_history.append({'role': role, 'content': text[:800]})
         except Exception:
             safe_history = []
+
+        # 游客仅可与 AI 对话 3 条（按用户发送条数计）
+        user_message_count = sum(1 for h in safe_history if h.get('role') == 'user') + 1
+        if user_message_count > 3:
+            return Response(
+                {'detail': '游客模式下仅可与 AI 对话 3 条，请登录后继续使用。'},
+                status=status.HTTP_403_FORBIDDEN
+            )
 
         messages = [{'role': 'system', 'content': get_system_prompt(None)}]
         messages.extend(safe_history)

@@ -9,9 +9,15 @@ from .serializers import (
     ElderSerializer, ElderSimpleSerializer,
     UserSerializer, UserCreateSerializer,
     ElderRegisterSerializer,
+    CustomTokenObtainPairSerializer,
 )
 
 User = get_user_model()
+
+
+class CustomTokenObtainPairView(TokenObtainPairView):
+    """登录接口：已停用社区账号会在此被拦截并返回提示"""
+    serializer_class = CustomTokenObtainPairSerializer
 
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -28,6 +34,22 @@ class UserViewSet(viewsets.ModelViewSet):
         ser = UserSerializer(request.user)
         return Response(ser.data)
 
+    def _ensure_elder_profile(self, user):
+        """老人端：若未关联档案则尝试按身份证号(username)自动恢复关联"""
+        if user.elder_profile:
+            return user.elder_profile
+        if getattr(user, 'role', None) != 'elder' or not (user.username or '').strip():
+            return None
+        id_card = (user.username or '').strip()
+        if len(id_card) not in (15, 18):
+            return None
+        elder = Elder.objects.filter(id_card=id_card).first()
+        if elder:
+            user.elder_profile = elder
+            user.save(update_fields=['elder_profile_id'])
+            return elder
+        return None
+
     @action(detail=False, methods=['patch'], url_path='update-phone')
     def update_phone(self, request):
         """老人端：修改当前用户手机号"""
@@ -39,10 +61,27 @@ class UserViewSet(viewsets.ModelViewSet):
         user = request.user
         user.phone = phone
         user.save()
-        if user.elder_profile:
-            user.elder_profile.phone = phone
-            user.elder_profile.save()
+        elder = self._ensure_elder_profile(user)
+        if elder:
+            elder.phone = phone
+            elder.save(update_fields=['phone'])
         return Response({'message': '修改成功', 'phone': phone})
+
+    @action(detail=False, methods=['post'], url_path='change-password')
+    def change_password(self, request):
+        """已登录用户修改密码：需提供旧密码和新密码"""
+        old_password = request.data.get('old_password') or ''
+        new_password = request.data.get('new_password') or ''
+        if not old_password:
+            return Response({'old_password': ['请输入旧密码']}, status=status.HTTP_400_BAD_REQUEST)
+        if not new_password or len(new_password) < 6:
+            return Response({'new_password': ['新密码至少6位']}, status=status.HTTP_400_BAD_REQUEST)
+        user = request.user
+        if not user.check_password(old_password):
+            return Response({'old_password': ['旧密码错误']}, status=status.HTTP_400_BAD_REQUEST)
+        user.set_password(new_password)
+        user.save(update_fields=['password'])
+        return Response({'message': '密码修改成功，请重新登录'})
 
     @action(detail=False, methods=['post'], permission_classes=[AllowAny], url_path='elder-register')
     def elder_register(self, request):

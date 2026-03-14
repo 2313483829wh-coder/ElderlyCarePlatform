@@ -7,16 +7,43 @@
       <h1 class="page-title">账号管理</h1>
     </div>
 
-    <!-- 已登录：仅显示修改手机号 -->
-    <div v-if="isAuthed" class="auth-card">
-      <div class="auth-form">
-        <div class="field">
-          <label>手机号</label>
-          <input v-model="phone" type="tel" maxlength="11" placeholder="请输入11位手机号" />
+    <!-- 已登录：修改手机号 + 修改密码 -->
+    <div v-if="isAuthed" class="logged-in-section">
+      <div class="auth-card">
+        <h2 class="card-title">修改手机号</h2>
+        <div class="auth-form">
+          <div class="field">
+            <label>手机号</label>
+            <input v-model="phone" type="tel" maxlength="11" placeholder="请输入11位手机号" />
+          </div>
+          <button class="primary-btn" :disabled="phoneLoading || !phone.trim()" @click="savePhone">
+            {{ phoneLoading ? '保存中...' : '保存' }}
+          </button>
         </div>
-        <button class="primary-btn" :disabled="phoneLoading || !phone.trim()" @click="savePhone">
-          {{ phoneLoading ? '保存中...' : '保存' }}
-        </button>
+      </div>
+      <div class="auth-card">
+        <h2 class="card-title">修改密码</h2>
+        <div class="auth-form">
+          <div class="field">
+            <label>旧密码</label>
+            <input v-model="pwdForm.old_password" type="password" placeholder="请输入当前密码" />
+          </div>
+          <div class="field">
+            <label>新密码</label>
+            <input v-model="pwdForm.new_password" type="password" placeholder="请设置新密码(至少6位)" />
+          </div>
+          <div class="field">
+            <label>确认新密码</label>
+            <input v-model="pwdForm.confirm_password" type="password" placeholder="再次输入新密码" />
+          </div>
+          <button
+            class="primary-btn"
+            :disabled="pwdLoading || !pwdForm.old_password || !pwdForm.new_password || !pwdForm.confirm_password"
+            @click="changePassword"
+          >
+            {{ pwdLoading ? '提交中...' : '确认修改' }}
+          </button>
+        </div>
       </div>
     </div>
 
@@ -55,11 +82,11 @@
         </div>
         <div class="field">
           <label>电话号码</label>
-          <input v-model="regForm.phone" maxlength="20" placeholder="请输入电话号码" />
+          <input v-model="regForm.phone" type="tel" maxlength="11" placeholder="请输入11位电话号码" />
         </div>
         <div class="field">
           <label>身份证号</label>
-          <input v-model="regForm.id_card" maxlength="18" placeholder="请输入身份证号" />
+          <input v-model="regForm.id_card" maxlength="18" placeholder="请输入18位身份证号" />
         </div>
         <div class="field">
           <label>密码</label>
@@ -78,6 +105,7 @@
 import { ref, reactive, onMounted, inject, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { ArrowLeft } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
 import request from '@/utils/request'
 
 const router = useRouter()
@@ -86,12 +114,14 @@ const isAuthed = inject('isAuthed', ref(!!localStorage.getItem('elder_token')))
 
 const phone = ref('')
 const phoneLoading = ref(false)
+const pwdLoading = ref(false)
 const authTab = ref('login')
 const authLoading = ref(false)
 const communities = ref([])
 
 const loginForm = reactive({ username: '', password: '' })
 const regForm = reactive({ community_id: null, name: '', phone: '', id_card: '', password: '' })
+const pwdForm = reactive({ old_password: '', new_password: '', confirm_password: '' })
 
 async function loadMyPhone() {
   try {
@@ -118,6 +148,36 @@ async function savePhone() {
   }
 }
 
+async function changePassword() {
+  const { old_password, new_password, confirm_password } = pwdForm
+  if (!old_password) return ElMessage.warning('请输入旧密码')
+  if (!new_password) return ElMessage.warning('请输入新密码')
+  if (new_password.length < 6) return ElMessage.warning('新密码至少6位')
+  if (new_password !== confirm_password) return ElMessage.warning('两次输入的新密码不一致')
+  pwdLoading.value = true
+  try {
+    await request.post('/auth/users/change-password/', {
+      old_password,
+      new_password,
+    })
+    ElMessage.success('密码修改成功，请重新登录')
+    pwdForm.old_password = ''
+    pwdForm.new_password = ''
+    pwdForm.confirm_password = ''
+    localStorage.removeItem('elder_token')
+    localStorage.removeItem('token')
+    refreshAuth()
+    await nextTick()
+    router.push('/m/account')
+  } catch (e) {
+    const data = e.response?.data
+    const msg = data?.old_password?.[0] || data?.new_password?.[0] || '修改失败，请重试'
+    ElMessage.error(typeof msg === 'string' ? msg : '修改失败，请重试')
+  } finally {
+    pwdLoading.value = false
+  }
+}
+
 async function loadPublicCommunities() {
   try {
     communities.value = await request.get('/communities/public/')
@@ -138,28 +198,65 @@ async function doLogin() {
     await nextTick()
     await router.push('/m/chat')
   } catch (e) {
-    alert('登录失败，请检查身份证号或密码')
+    const d = e.response?.data?.detail
+    const msg = typeof d === 'string' ? d : Array.isArray(d) ? d[0] : null
+    ElMessage.error(msg || '账户不存在或密码错误')
   } finally {
     authLoading.value = false
   }
 }
 
+function validateIdCard(v) {
+  const s = (v || '').trim()
+  if (!s) return '请输入身份证号'
+  if (s.length !== 18) return '身份证号为18位'
+  if (!/^\d{17}[\dXx]$/.test(s)) return '身份证号格式不正确'
+  return null
+}
+function validatePhone(v) {
+  const s = (v || '').trim()
+  if (!s) return '请输入电话号码'
+  if (s.length !== 11 || !/^\d+$/.test(s)) return '请输入正确的11位电话号码'
+  return null
+}
+
 async function doRegister() {
-  if (!regForm.community_id) return alert('请选择小区')
-  if (!regForm.name) return alert('请输入姓名')
-  if (!regForm.phone) return alert('请输入电话号码')
-  if (!regForm.id_card) return alert('请输入身份证号')
-  if (!regForm.password || regForm.password.length < 6) return alert('密码至少6位')
+  if (!regForm.community_id) {
+    ElMessage.warning('请选择小区')
+    return
+  }
+  if (!(regForm.name || '').trim()) {
+    ElMessage.warning('请输入姓名')
+    return
+  }
+  const phoneErr = validatePhone(regForm.phone)
+  if (phoneErr) {
+    ElMessage.warning(phoneErr)
+    return
+  }
+  const idCardErr = validateIdCard(regForm.id_card)
+  if (idCardErr) {
+    ElMessage.warning(idCardErr)
+    return
+  }
+  if (!regForm.password || regForm.password.length < 6) {
+    ElMessage.warning('密码至少6位')
+    return
+  }
   authLoading.value = true
   try {
-    await request.post('/auth/users/elder-register/', regForm)
+    await request.post('/auth/users/elder-register/', {
+      ...regForm,
+      phone: (regForm.phone || '').trim(),
+      id_card: (regForm.id_card || '').trim().toUpperCase(),
+    })
     loginForm.username = regForm.id_card
     loginForm.password = regForm.password
     authTab.value = 'login'
     await doLogin()
   } catch (e) {
-    const msg = e?.response?.data?.id_card || e?.response?.data?.community_id || '注册失败，请重试'
-    alert(typeof msg === 'string' ? msg : '注册失败，请重试')
+    const msg = e?.response?.data?.id_card || e?.response?.data?.community_id || e?.response?.data?.phone || '注册失败，请重试'
+    ElMessage.error(typeof msg === 'string' ? msg : Array.isArray(msg) ? msg[0] : '注册失败，请重试')
   } finally {
     authLoading.value = false
   }
@@ -209,12 +306,25 @@ onMounted(() => {
   color: #1d1d1f;
 }
 
+.logged-in-section {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
 .auth-card {
   background: #ffffff;
   border: 1px solid rgba(0, 0, 0, 0.08);
   border-radius: 16px;
   box-shadow: 0 8px 24px rgba(0,0,0,0.06);
   padding: 22px 18px;
+}
+
+.card-title {
+  margin: 0 0 14px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #1d1d1f;
 }
 
 .auth-tabs {

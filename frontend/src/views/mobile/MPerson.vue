@@ -7,44 +7,67 @@
       <h1 class="page-title">设置</h1>
     </div>
 
-    <template v-if="isAuthed">
-      <div class="menu-list">
-        <div class="menu-item" @click="router.push('/m/account')">
-          <el-icon><User /></el-icon>
-          <span>账号管理</span>
-          <el-icon class="arrow"><ArrowRight /></el-icon>
-        </div>
-        <div class="menu-item" @click="handleLogout">
-          <el-icon><SwitchButton /></el-icon>
-          <span>退出登录</span>
-          <el-icon class="arrow"><ArrowRight /></el-icon>
-        </div>
+    <div class="menu-list">
+      <div class="menu-item" @click="showServerUrlDialog = true">
+        <el-icon><Connection /></el-icon>
+        <span>服务器地址</span>
+        <span class="menu-extra">{{ serverUrlDisplay }}</span>
+        <el-icon class="arrow"><ArrowRight /></el-icon>
       </div>
-    </template>
+      <div class="menu-item" @click="router.push('/m/account')">
+        <el-icon><User /></el-icon>
+        <span>账号管理</span>
+        <el-icon class="arrow"><ArrowRight /></el-icon>
+      </div>
+      <div v-if="isAuthed" class="menu-item" @click="handleLogout">
+        <el-icon><SwitchButton /></el-icon>
+        <span>退出登录</span>
+        <el-icon class="arrow"><ArrowRight /></el-icon>
+      </div>
+    </div>
 
-    <template v-else>
-      <div class="menu-list">
-        <div class="menu-item" @click="router.push('/m/account')">
-          <el-icon><User /></el-icon>
-          <span>账号管理</span>
-          <el-icon class="arrow"><ArrowRight /></el-icon>
-        </div>
-      </div>
-    </template>
+    <el-dialog
+      v-model="showServerUrlDialog"
+      title="服务器地址"
+      width="90%"
+      class="server-url-dialog"
+    >
+      <p class="dialog-tip">手机需与运行后端的电脑在同一 WiFi。填写电脑的 IP 和端口，例如：</p>
+      <p class="dialog-example">http://192.168.1.100:8000/api</p>
+      <p class="dialog-tip-small">在电脑上运行 ipconfig（Windows）可查看 IPv4 地址。</p>
+      <el-input
+        v-model="serverUrlInput"
+        placeholder="http://192.168.1.100:8000/api"
+        clearable
+      />
+      <template #footer>
+        <el-button @click="clearServerUrl">恢复默认</el-button>
+        <el-button type="primary" @click="saveServerUrl">保存</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, inject } from 'vue'
+import { ref, reactive, onMounted, inject, computed, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
-import { User, EditPen, SwitchButton, ArrowRight, ArrowLeft } from '@element-plus/icons-vue'
-import request from '@/utils/request'
+import { User, EditPen, SwitchButton, ArrowRight, ArrowLeft, Connection } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
+import request, { getApiBase, setApiBase } from '@/utils/request'
 
 const router = useRouter()
 const refreshAuth = inject('refreshAuth', () => {})
 const isAuthed = inject('isAuthed', ref(!!localStorage.getItem('elder_token')))
 const elderName = ref('')
 const showEditModal = ref(false)
+const showServerUrlDialog = ref(false)
+const serverUrlInput = ref('')
+
+const serverUrlDisplay = computed(() => {
+  const base = getApiBase()
+  if (base === '/api') return '默认'
+  return base.length > 24 ? base.slice(0, 21) + '...' : base
+})
 const submitting = ref(false)
 const authTab = ref('login')
 const authLoading = ref(false)
@@ -88,6 +111,36 @@ async function loadPublicCommunities() {
   }
 }
 
+watch(showServerUrlDialog, (open) => {
+  if (open) {
+    const base = getApiBase()
+    serverUrlInput.value = base === '/api' ? '' : base
+  }
+})
+
+function saveServerUrl() {
+  const v = (serverUrlInput.value || '').trim()
+  if (!v) {
+    setApiBase('')
+    ElMessage.success('已恢复默认地址')
+  } else {
+    if (!v.startsWith('http://') && !v.startsWith('https://')) {
+      ElMessage.warning('请填写以 http:// 或 https:// 开头的完整地址')
+      return
+    }
+    setApiBase(v)
+    ElMessage.success('服务器地址已保存')
+  }
+  showServerUrlDialog.value = false
+}
+
+function clearServerUrl() {
+  serverUrlInput.value = ''
+  setApiBase('')
+  ElMessage.success('已恢复默认地址')
+  showServerUrlDialog.value = false
+}
+
 async function doLogin() {
   if (!loginForm.username) return alert('请输入身份证号')
   if (!loginForm.password) return alert('请输入密码')
@@ -101,29 +154,66 @@ async function doLogin() {
     await nextTick() // 确保 MLayout 的 isAuthed 已同步
     await router.push('/m/chat')
   } catch (e) {
-    alert('登录失败，请检查身份证号或密码')
+    const d = e.response?.data?.detail
+    const msg = typeof d === 'string' ? d : Array.isArray(d) ? d[0] : null
+    ElMessage.error(msg || '账户不存在或密码错误')
   } finally {
     authLoading.value = false
   }
 }
 
+function validateIdCard(v) {
+  const s = (v || '').trim()
+  if (!s) return '请输入身份证号'
+  if (s.length !== 18) return '身份证号为18位'
+  if (!/^\d{17}[\dXx]$/.test(s)) return '身份证号格式不正确'
+  return null
+}
+function validatePhone(v) {
+  const s = (v || '').trim()
+  if (!s) return '请输入电话号码'
+  if (s.length !== 11 || !/^\d+$/.test(s)) return '请输入正确的11位电话号码'
+  return null
+}
+
 async function doRegister() {
-  if (!regForm.community_id) return alert('请选择小区')
-  if (!regForm.name) return alert('请输入姓名')
-  if (!regForm.phone) return alert('请输入电话号码')
-  if (!regForm.id_card) return alert('请输入身份证号')
-  if (!regForm.password || regForm.password.length < 6) return alert('密码至少6位')
+  if (!regForm.community_id) {
+    ElMessage.warning('请选择小区')
+    return
+  }
+  if (!(regForm.name || '').trim()) {
+    ElMessage.warning('请输入姓名')
+    return
+  }
+  const phoneErr = validatePhone(regForm.phone)
+  if (phoneErr) {
+    ElMessage.warning(phoneErr)
+    return
+  }
+  const idCardErr = validateIdCard(regForm.id_card)
+  if (idCardErr) {
+    ElMessage.warning(idCardErr)
+    return
+  }
+  if (!regForm.password || regForm.password.length < 6) {
+    ElMessage.warning('密码至少6位')
+    return
+  }
   authLoading.value = true
   try {
-    await request.post('/auth/users/elder-register/', regForm)
+    await request.post('/auth/users/elder-register/', {
+      ...regForm,
+      phone: (regForm.phone || '').trim(),
+      id_card: (regForm.id_card || '').trim().toUpperCase(),
+    })
     // 注册成功后自动登录
     loginForm.username = regForm.id_card
     loginForm.password = regForm.password
     authTab.value = 'login'
     await doLogin()
   } catch (e) {
-    const msg = e?.response?.data?.id_card || e?.response?.data?.community_id || '注册失败，请重试'
-    alert(typeof msg === 'string' ? msg : '注册失败，请重试')
+    const msg = e?.response?.data?.id_card || e?.response?.data?.community_id || e?.response?.data?.phone || '注册失败，请重试'
+    ElMessage.error(typeof msg === 'string' ? msg : Array.isArray(msg) ? msg[0] : '注册失败，请重试')
   } finally {
     authLoading.value = false
   }
@@ -149,7 +239,17 @@ async function submitEdit() {
     alert('修改成功')
     showEditModal.value = false
   } catch (e) {
-    alert('保存失败，请重试')
+    if (e?.response?.data?.invalid) {
+      form.heart_rate = null
+      form.blood_oxygen = null
+      form.systolic_bp = null
+      form.diastolic_bp = null
+      form.temperature = null
+      form.blood_sugar = null
+      form.feeling = ''
+    } else {
+      alert('保存失败，请重试')
+    }
   } finally {
     submitting.value = false
   }
@@ -358,6 +458,33 @@ onMounted(async () => {
 
 .menu-item:last-child {
   border-bottom: none;
+}
+
+.menu-item .menu-extra {
+  flex: 1;
+  text-align: right;
+  font-size: 13px;
+  color: #6e6e73;
+  margin-right: 4px;
+}
+
+.dialog-tip,
+.dialog-example,
+.dialog-tip-small {
+  margin: 0 0 8px;
+  font-size: 14px;
+  color: #6e6e73;
+}
+.dialog-example {
+  font-family: monospace;
+  color: #1d1d1f;
+}
+.dialog-tip-small {
+  font-size: 12px;
+  margin-bottom: 12px;
+}
+.server-url-dialog :deep(.el-input) {
+  margin-top: 8px;
 }
 
 .menu-item .el-icon {
