@@ -1,0 +1,9 @@
+# 构建镜像时不要带入本地 env，避免把绝对 API 地址打进前端
+.env
+.env.*
+!.env.example
+!.env.production.example
+node_modules
+dist
+.git
+*.md
