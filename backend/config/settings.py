@@ -11,7 +11,12 @@ SECRET_KEY = os.environ.get(
     'django-insecure-community-elderly-care-platform-2026'
 )
 DEBUG = os.environ.get('DJANGO_DEBUG', 'True').lower() == 'true'
-ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS', '*').split(',')
+_allowed = os.environ.get('DJANGO_ALLOWED_HOSTS', '*').strip()
+ALLOWED_HOSTS = [h.strip() for h in _allowed.split(',') if h.strip()]
+if '*' not in ALLOWED_HOSTS:
+    for h in ('127.0.0.1', 'localhost'):
+        if h not in ALLOWED_HOSTS:
+            ALLOWED_HOSTS.append(h)
 
 INSTALLED_APPS = [
     'django.contrib.admin',
