@@ -14,6 +14,15 @@
 2. **（可选）域名**
    - 有域名可解析到该 IP，后面 App 和网页都用 `https://你的域名`；没有则先用 `http://公网IP` 也可。
 
+### 阿里云 ECS 特别说明
+
+- **安全组**：登录 [阿里云控制台](https://ecs.console.aliyun.com) → 你的 ECS 实例 → 安全组 → 配置规则 → 入方向，新增两条：
+  - 端口 **22**（SSH），授权对象 `0.0.0.0/0`
+  - 端口 **80**（HTTP），授权对象 `0.0.0.0/0`
+- **公网 IP**：在 ECS 实例列表里点你的实例，即可看到「公网 IP」。
+- **Git 克隆**：阿里云服务器在国内，直连 GitHub 可能很慢或超时。建议用**方式 B（本地上传）**，或克隆时用镜像：  
+  `git clone https://ghproxy.com/https://github.com/2313483829wh-coder/ElderlyCarePlatform.git`
+
 ---
 
 ## 二、在服务器上执行（一次性）
@@ -51,13 +60,14 @@ docker compose version
 
 任选一种方式：
 
-**方式 A：本机用 Git，服务器能上网**
+**方式 A：在服务器上用 Git 克隆**
 
-在服务器上：
+在服务器上（国内服务器建议用镜像地址，否则可能超时）：
 
 ```bash
 cd ~
-git clone <你的仓库地址> ElderlyCarePlatform
+# 使用 GitHub 镜像（国内推荐）
+git clone https://ghproxy.com/https://github.com/2313483829wh-coder/ElderlyCarePlatform.git
 cd ElderlyCarePlatform
 ```
 

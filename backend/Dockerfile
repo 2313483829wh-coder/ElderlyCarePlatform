@@ -5,10 +5,7 @@ ENV PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    gcc default-libmysqlclient-dev pkg-config && \
-    rm -rf /var/lib/apt/lists/*
-
+# 使用 PyMySQL 替代 mysqlclient，无需 apt 安装 gcc/mysql 开发包，避免构建卡住
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt gunicorn
 
