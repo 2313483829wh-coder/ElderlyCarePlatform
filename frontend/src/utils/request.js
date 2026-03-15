@@ -32,9 +32,17 @@ let lastNetworkErrorTip = 0
 const NETWORK_ERROR_COOLDOWN = 3000
 
 request.interceptors.request.use(config => {
-  config.baseURL = getApiBase()
+  const base = getApiBase()
   const token = localStorage.getItem('token') || localStorage.getItem('elder_token')
   if (token) config.headers.Authorization = `Bearer ${token}`
+  // axios 在 url 以 / 开头时会忽略 baseURL，必须手动拼接完整路径
+  if (config.url && !config.url.startsWith('http') && base) {
+    const path = config.url.startsWith('/') ? config.url : '/' + config.url
+    config.url = base.replace(/\/+$/, '') + path
+    config.baseURL = ''
+  } else {
+    config.baseURL = base
+  }
   return config
 })
 

@@ -177,11 +177,15 @@ docker compose ps
      - 若状态码 **500**：看服务器后端日志：`docker compose logs backend`，把报错贴给开发者。
   3. **确认后端正常**：在浏览器新开标签访问 `http://你的公网IP/api/`，若看到 `{"status":"ok",...}` 说明 API 可达；若“无法访问”说明请求没到后端。
   4. **管理端一直提示「无法连接服务器」**  
-     **原因**：旧版前端构建时把 API 地址写死成了 `http://某IP:8000/api`，浏览器会去连那个地址而不是当前站点的 `/api`，所以连不上。  
-     **解决**：必须用当前仓库代码**重新构建前端**（构建时会使用相对路径 `/api`），并在浏览器清缓存后再试。在服务器项目根目录执行：
+     **原因**：① 旧版前端把 API 写死成绝对地址；② axios 对以 `/` 开头的 URL 会忽略 baseURL，导致请求发到 `/auth/login/` 而不是 `/api/auth/login/`。  
+     **一键修复**：在服务器项目根目录执行：
+     ```bash
+     bash deploy/fix-deploy.sh
+     ```
+     或手动执行：
      ```bash
      git pull origin main
-     docker compose build --no-cache frontend
+     docker compose build --no-cache backend frontend
      docker compose up -d
      ```
      然后**清除浏览器缓存**（Ctrl+Shift+Delete 或强刷 Ctrl+F5），再打开 `http://你的公网IP` 用 admin / admin123 登录。  
