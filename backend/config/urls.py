@@ -2,8 +2,14 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from django.http import JsonResponse
+
+def api_root(request):
+    """用于快速检查 API 是否可达：访问 /api/ 返回 200"""
+    return JsonResponse({'status': 'ok', 'message': 'API 正常'})
 
 urlpatterns = [
+    path('api/', api_root),
     path('admin/', admin.site.urls),
     path('api/auth/', include('apps.elders.urls')),
     path('api/communities/', include('apps.community.urls')),

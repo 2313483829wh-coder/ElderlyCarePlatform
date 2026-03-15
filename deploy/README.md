@@ -175,7 +175,13 @@ docker compose ps
      - 若状态码 **401**：用户名或密码错误，再执行一次上面 `createadmin` 后重试。
      - 若状态码 **404** 或 **failed**：接口地址不对，确认访问的是 `http://你的公网IP`（前端会请求同源的 `/api/auth/login/`）。
      - 若状态码 **500**：看服务器后端日志：`docker compose logs backend`，把报错贴给开发者。
-  3. **确认后端正常**：在浏览器新开标签访问 `http://你的公网IP/api/`，若返回 JSON 或 404 页面（而不是“无法访问”）说明 API 可达。
+  3. **确认后端正常**：在浏览器新开标签访问 `http://你的公网IP/api/`，若看到 `{"status":"ok",...}` 说明 API 可达；若“无法访问”说明请求没到后端。
+  4. **管理端一直提示「无法连接服务器」**：多半是服务器上的前端镜像还是旧的。在服务器项目根目录执行**重新构建前端并重启**：
+     ```bash
+     docker compose build --no-cache frontend
+     docker compose up -d
+     ```
+     然后**清除浏览器缓存**（或 Ctrl+Shift+Delete 清缓存），再打开 `http://你的公网IP` 用 admin / admin123 登录。若仍不行，在服务器上执行 `curl -s http://127.0.0.1/api/`，应返回 `{"status":"ok",...}`；若这里都失败，说明后端或 nginx 未正常转发。
 - **重启服务**：在服务器项目根目录执行 `docker compose restart`。
 - **看日志**：`docker compose logs -f backend` 或 `docker compose logs -f frontend`。
 
