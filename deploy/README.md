@@ -192,6 +192,40 @@ docker compose ps
      若仍不行：在服务器上执行 `curl -s http://127.0.0.1/api/`，应返回 `{"status":"ok",...}`；若这里都失败，说明后端或 nginx 未正常转发。
 - **重启服务**：在服务器项目根目录执行 `docker compose restart`。
 - **看日志**：`docker compose logs -f backend` 或 `docker compose logs -f frontend`。
+- **手机流量无法连接**：运营商常屏蔽 HTTP，需启用 HTTPS。见下方「六、启用 HTTPS」。
+
+---
+
+## 六、启用 HTTPS（手机流量可用）
+
+手机 4G/5G 常屏蔽 HTTP，需 HTTPS 才能用流量访问。
+
+### 方式：用 nip.io 免费域名（无需购买域名）
+
+`47.111.26.171.nip.io` 会解析到 `47.111.26.171`，可申请 Let's Encrypt 免费证书。
+
+**在服务器上执行：**
+
+```bash
+# 1. 安装 certbot
+sudo apt update && sudo apt install -y certbot
+
+# 2. 进入项目目录
+cd ~/ElderlyCarePlatform
+
+# 3. 获取证书并启用 HTTPS
+bash deploy/ssl-setup.sh
+```
+
+**4. 安全组放行 443**：阿里云控制台 → 安全组 → 入方向 → 添加端口 **443**。
+
+**5. 本地修改并重打 APK**：在 `frontend/.env.production` 中写：
+```env
+VITE_API_BASE=https://47.111.26.171.nip.io/api
+```
+然后执行 `npm run apk`，安装新 APK 后即可用手机流量访问。
+
+**证书续期**（每 90 天）：在服务器执行 `sudo certbot renew`，再 `docker compose -f docker-compose.yml -f deploy/docker-compose.https.yml restart frontend`。
 
 ---
 
