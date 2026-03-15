@@ -162,6 +162,20 @@ docker compose ps
 
 - **安全组 / 防火墙**：确保云控制台里该服务器**开放 80 端口**（和 22 用于 SSH）。
 - **无法访问**：先在本机 `curl http://你的公网IP` 或浏览器访问，确认能通再在手机 App 里用该地址。
+- **管理端登录不上**：按下面顺序排查。
+  1. **先创建/重置管理员账号**（在服务器项目根目录执行）：
+     ```bash
+     docker compose exec backend python manage.py createadmin
+     ```
+     会创建或重置为 **admin** / **admin123**。若需自定义账号密码：
+     ```bash
+     docker compose exec backend python manage.py createadmin --username=你的用户名 --password=你的密码
+     ```
+  2. **仍无法登录时**：在浏览器按 F12 打开开发者工具 → 切到「网络 / Network」→ 再点一次登录，看 **login** 或 **auth** 请求：
+     - 若状态码 **401**：用户名或密码错误，再执行一次上面 `createadmin` 后重试。
+     - 若状态码 **404** 或 **failed**：接口地址不对，确认访问的是 `http://你的公网IP`（前端会请求同源的 `/api/auth/login/`）。
+     - 若状态码 **500**：看服务器后端日志：`docker compose logs backend`，把报错贴给开发者。
+  3. **确认后端正常**：在浏览器新开标签访问 `http://你的公网IP/api/`，若返回 JSON 或 404 页面（而不是“无法访问”）说明 API 可达。
 - **重启服务**：在服务器项目根目录执行 `docker compose restart`。
 - **看日志**：`docker compose logs -f backend` 或 `docker compose logs -f frontend`。
 

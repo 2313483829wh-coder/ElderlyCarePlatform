@@ -32,8 +32,11 @@ class Command(BaseCommand):
 
         if not User.objects.filter(username='admin').exists():
             User.objects.create_superuser(
-                username='admin', password='admin123',
-                name='系统管理员', role='admin',
+                username='admin',
+                email='admin@example.com',
+                password='admin123',
+                name='系统管理员',
+                role='admin',
             )
             self.stdout.write('  管理员账号创建完成 (admin / admin123)')
 

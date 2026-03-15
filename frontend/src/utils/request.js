@@ -1,12 +1,20 @@
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
 import router from '@/router'
+import { Capacitor } from '@capacitor/core'
 
 const STORAGE_API_BASE = 'elder_api_base'
 
+/** 仅老人端（/m 或 App）使用 localStorage 的服务器地址；管理端始终用当前站点 /api */
 export function getApiBase() {
-  const saved = localStorage.getItem(STORAGE_API_BASE)
-  if (saved != null && saved.trim() !== '') return saved.trim().replace(/\/+$/, '')
+  const isElderSide = typeof window !== 'undefined' && (
+    window.location.pathname.startsWith('/m') ||
+    Capacitor.isNativePlatform()
+  )
+  if (isElderSide) {
+    const saved = localStorage.getItem(STORAGE_API_BASE)
+    if (saved != null && saved.trim() !== '') return saved.trim().replace(/\/+$/, '')
+  }
   return (import.meta.env.VITE_API_BASE || '/api').replace(/\/+$/, '')
 }
 
@@ -53,7 +61,10 @@ request.interceptors.response.use(
           err.code === 'ERR_NETWORK' ||
           (err.message && (err.message.includes('Network Error') || err.message.includes('fetch')))
         if (isNetworkError) {
-          msg = '无法连接服务器。请在【设置 → 服务器地址】填写电脑上的后端地址（如 http://192.168.1.100:8000/api），并确保手机与电脑在同一 WiFi。'
+          const isElderSide = router.currentRoute?.value?.path?.startsWith('/m') || Capacitor.isNativePlatform()
+          msg = isElderSide
+            ? '无法连接服务器。请到【设置 → 服务器地址】填写后端 API 地址（例如 http://你的公网IP/api）。'
+            : '无法连接服务器，请检查网络或稍后重试。'
           const now = Date.now()
           if (now - lastNetworkErrorTip < NETWORK_ERROR_COOLDOWN) return Promise.reject(err)
           lastNetworkErrorTip = now
