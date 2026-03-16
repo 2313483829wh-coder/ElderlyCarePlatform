@@ -12,9 +12,9 @@ RUN npm config set registry https://registry.npmmirror.com \
     && npm config set fetch-timeout 300000 \
     && npm config set fetch-retries 5
 
-# 必须保留 optional 依赖（rollup 在 alpine 需要 @rollup/rollup-linux-x64-musl）
-RUN npm install --include=optional \
-    && npm install @rollup/rollup-linux-x64-musl --no-save
+# 规避 npm optional 依赖 bug，同时跳过 sharp 等 postinstall（web 构建不需要）
+RUN npm install --include=optional --ignore-scripts \
+    && npm install @rollup/rollup-linux-x64-musl --no-save --ignore-scripts
 COPY . .
 # 强制使用相对路径 /api，避免任何 .env 写死绝对地址
 ENV VITE_API_BASE=/api
