@@ -1,0 +1,14 @@
+# 减小构建上下文，避免 venv/缓存拖慢
+venv
+__pycache__
+*.py[cod]
+*.pyo
+.git
+.gitignore
+*.md
+.env
+.env.*
+*.sqlite3
+*.log
+.idea
+.vscode

@@ -192,6 +192,11 @@ docker compose ps
      若仍不行：在服务器上执行 `curl -s http://127.0.0.1/api/`，应返回 `{"status":"ok",...}`；若这里都失败，说明后端或 nginx 未正常转发。
 - **重启服务**：在服务器项目根目录执行 `docker compose restart`。
 - **看日志**：`docker compose logs -f backend` 或 `docker compose logs -f frontend`。
+- **Docker 构建失败**：项目已配置国内镜像（pip 清华源、npm npmmirror、sharp 镜像）。
+  - 先 `docker compose build --no-cache` 清除缓存重试。
+  - 分步构建定位：`docker compose build backend`、`docker compose build frontend` 分别执行。
+  - 前端 npm 超时：已设 npmmirror + 5 分钟超时 + 5 次重试，多试几次。
+  - 后端 pip 超时：已用清华源，可改为阿里云 `https://mirrors.aliyun.com/pypi/simple/`。
 - **手机流量无法连接**：运营商常屏蔽 HTTP，需启用 HTTPS。见下方「六、启用 HTTPS」。
 
 ---

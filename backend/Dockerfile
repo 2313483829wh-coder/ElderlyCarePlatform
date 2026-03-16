@@ -5,7 +5,10 @@ ENV PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
-# 使用 PyMySQL 替代 mysqlclient，无需 apt 安装 gcc/mysql 开发包，避免构建卡住
+# 国内 PyPI 镜像，避免 pip install 超时失败
+ENV PIP_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple
+ENV PIP_TRUSTED_HOST=pypi.tuna.tsinghua.edu.cn
+
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt gunicorn
 
