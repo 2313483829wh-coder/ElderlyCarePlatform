@@ -4,8 +4,9 @@ WORKDIR /app
 COPY package*.json ./
 # Alpine 下安装构建依赖（如 sharp 等原生模块需要）
 RUN apk add --no-cache build-base python3
-# 国内网络常超时，启用 npmmirror 加速依赖安装
+# 国内网络：npm 与 sharp/libvips 镜像
 RUN npm config set registry https://registry.npmmirror.com
+ENV SHARP_DIST_BASE_URL=https://npmmirror.com/mirrors/sharp-libvips/
 RUN npm install --omit=optional
 COPY . .
 # 强制使用相对路径 /api，避免任何 .env 写死绝对地址
