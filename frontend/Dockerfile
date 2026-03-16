@@ -1,8 +1,10 @@
-FROM node:20-alpine AS build
+FROM node:22-alpine AS build
 
 WORKDIR /app
 COPY package*.json ./
-# 国内网络常超时，启用 npmmirror 加速
+# Alpine 下安装构建依赖（如 sharp 等原生模块需要）
+RUN apk add --no-cache build-base python3
+# 国内网络常超时，启用 npmmirror 加速依赖安装
 RUN npm config set registry https://registry.npmmirror.com
 RUN npm install --omit=optional
 COPY . .
