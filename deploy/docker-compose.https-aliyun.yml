@@ -1,0 +1,14 @@
+# 使用阿里云免费证书时用此配置
+# 使用方式：先把证书放到 certs/ 目录，然后：
+#   docker compose -f docker-compose.yml -f deploy/docker-compose.https-aliyun.yml up -d frontend
+# 详见 deploy/SSL-阿里云免费证书.md
+
+services:
+  frontend:
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./certs:/etc/ssl/elderlycare:ro
+      - ./deploy/nginx-ssl-aliyun.conf:/etc/nginx/conf.d/default.conf:ro
+    command: /bin/sh -c "nginx -g 'daemon off;'"

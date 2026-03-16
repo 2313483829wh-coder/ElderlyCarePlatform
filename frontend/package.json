@@ -10,7 +10,9 @@
     "build:app": "npm run build && npx cap sync",
     "android": "npm run build:app && npx cap open android",
     "ios": "npm run build:app && npx cap open ios",
-    "apk": "npm run build:app && cd android && .\\gradlew.bat assembleDebug"
+    "apk": "npm run build:app && cd android && .\\gradlew.bat assembleDebug",
+    "generate:icons": "node scripts/generate-android-icons.js",
+    "generate:icons:capacitor": "npx @capacitor/assets generate --androidProject android --iconBackgroundColor '#ffffff' --splashBackgroundColor '#ffffff'"
   },
   "dependencies": {
     "@capacitor/android": "^8.2.0",
@@ -27,8 +29,10 @@
     "vue-router": "^4.5.0"
   },
   "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
     "@vitejs/plugin-vue": "^5.2.0",
     "sass": "^1.88.0",
+    "selfsigned": "^5.5.0",
     "vite": "^6.3.0"
   }
 }

@@ -118,12 +118,17 @@ class Command(BaseCommand):
         self.stdout.write('  14天健康数据生成完成')
 
         year = today.year
-        for elder in elders:
-            if random.random() < 0.6:
+        month = today.month
+        # 体检记录：前4位老人只做1次（保证体检管理「未完成」列表有数据），后4位随机
+        for i, elder in enumerate(elders):
+            do_first = (i < 4) or random.random() < 0.5
+            do_second = (i >= 4) and random.random() < 0.4
+            if do_first:
+                m1 = max(1, min(month - 1, 5)) if month > 1 else 3
                 Checkup.objects.get_or_create(
                     elder=elder, year=year, sequence=1,
                     defaults={
-                        'check_date': date(year, random.randint(3, 5), random.randint(1, 28)),
+                        'check_date': date(year, m1 or 3, random.randint(1, 28)),
                         'hospital': random.choice(['市中心医院', '社区卫生服务中心', '人民医院']),
                         'height': Decimal(str(random.randint(150, 178))),
                         'weight': Decimal(str(round(random.uniform(48, 80), 1))),
@@ -135,11 +140,12 @@ class Command(BaseCommand):
                         'doctor_advice': random.choice(['注意饮食清淡', '按时服药，定期复查', '加强锻炼', '无特殊建议']),
                     }
                 )
-            if random.random() < 0.3:
+            if do_second:
+                m2 = 9 if month >= 9 else 11
                 Checkup.objects.get_or_create(
                     elder=elder, year=year, sequence=2,
                     defaults={
-                        'check_date': date(year, random.randint(9, 11), random.randint(1, 28)),
+                        'check_date': date(year, m2, random.randint(1, 28)),
                         'hospital': '社区卫生服务中心',
                         'height': Decimal(str(random.randint(150, 178))),
                         'weight': Decimal(str(round(random.uniform(48, 80), 1))),

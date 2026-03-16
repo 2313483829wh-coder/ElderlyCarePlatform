@@ -49,6 +49,16 @@
       </div>
 
       <div v-if="isAuthed" class="drawer-footer">
+        <div class="footer-item" @click="goTo('/m/history')">
+          <el-icon><Document /></el-icon>
+          <span>我的健康记录</span>
+          <el-icon class="arrow"><ArrowRight /></el-icon>
+        </div>
+        <div class="footer-item" @click="goTo('/m/checkup')">
+          <el-icon><Notebook /></el-icon>
+          <span>我的体检报告</span>
+          <el-icon class="arrow"><ArrowRight /></el-icon>
+        </div>
         <div class="footer-item" @click="goPerson">
           <el-icon><User /></el-icon>
           <span>设置</span>
@@ -74,7 +84,7 @@
 <script setup>
 import { ref, onMounted, provide, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { Fold, User, Plus, ArrowRight } from '@element-plus/icons-vue'
+import { Fold, User, Plus, ArrowRight, Document, Notebook } from '@element-plus/icons-vue'
 import request from '@/utils/request'
 
 const router = useRouter()
@@ -137,6 +147,11 @@ function newChatFromTop() {
 
 function goPerson() {
   router.push('/m/settings')
+  drawerVisible.value = false
+}
+
+function goTo(path) {
+  router.push(path)
   drawerVisible.value = false
 }
 

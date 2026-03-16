@@ -8,66 +8,43 @@
     </div>
 
     <div class="menu-list">
-      <div class="menu-item" @click="showServerUrlDialog = true">
-        <el-icon><Connection /></el-icon>
-        <span>服务器地址</span>
-        <span class="menu-extra">{{ serverUrlDisplay }}</span>
-        <el-icon class="arrow"><ArrowRight /></el-icon>
-      </div>
       <div class="menu-item" @click="router.push('/m/account')">
         <el-icon><User /></el-icon>
         <span>账号管理</span>
         <el-icon class="arrow"><ArrowRight /></el-icon>
       </div>
+      <template v-if="isAuthed">
+        <div class="menu-item" @click="router.push('/m/history')">
+          <el-icon><Document /></el-icon>
+          <span>我的健康记录</span>
+          <el-icon class="arrow"><ArrowRight /></el-icon>
+        </div>
+        <div class="menu-item" @click="router.push('/m/checkup')">
+          <el-icon><Notebook /></el-icon>
+          <span>我的体检报告</span>
+          <el-icon class="arrow"><ArrowRight /></el-icon>
+        </div>
+      </template>
       <div v-if="isAuthed" class="menu-item" @click="handleLogout">
         <el-icon><SwitchButton /></el-icon>
         <span>退出登录</span>
         <el-icon class="arrow"><ArrowRight /></el-icon>
       </div>
     </div>
-
-    <el-dialog
-      v-model="showServerUrlDialog"
-      title="服务器地址"
-      width="90%"
-      class="server-url-dialog"
-    >
-      <p class="dialog-tip">手机需与运行后端的电脑在同一 WiFi。填写电脑的 IP 和端口，例如：</p>
-      <p class="dialog-example">http://192.168.1.100:8000/api</p>
-      <p class="dialog-tip-small">在电脑上运行 ipconfig（Windows）可查看 IPv4 地址。</p>
-      <el-input
-        v-model="serverUrlInput"
-        placeholder="http://192.168.1.100:8000/api"
-        clearable
-      />
-      <template #footer>
-        <el-button @click="clearServerUrl">恢复默认</el-button>
-        <el-button type="primary" @click="saveServerUrl">保存</el-button>
-      </template>
-    </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, inject, computed, watch, nextTick } from 'vue'
+import { ref, reactive, onMounted, inject, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
-import { User, EditPen, SwitchButton, ArrowRight, ArrowLeft, Connection } from '@element-plus/icons-vue'
+import { User, SwitchButton, ArrowRight, ArrowLeft, Document, Notebook } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
-import request, { getApiBase, setApiBase } from '@/utils/request'
+import request from '@/utils/request'
 
 const router = useRouter()
 const refreshAuth = inject('refreshAuth', () => {})
 const isAuthed = inject('isAuthed', ref(!!localStorage.getItem('elder_token')))
 const elderName = ref('')
-const showEditModal = ref(false)
-const showServerUrlDialog = ref(false)
-const serverUrlInput = ref('')
-
-const serverUrlDisplay = computed(() => {
-  const base = getApiBase()
-  if (base === '/api') return '默认'
-  return base.length > 24 ? base.slice(0, 21) + '...' : base
-})
 const submitting = ref(false)
 const authTab = ref('login')
 const authLoading = ref(false)
@@ -109,36 +86,6 @@ async function loadPublicCommunities() {
   } catch (e) {
     communities.value = []
   }
-}
-
-watch(showServerUrlDialog, (open) => {
-  if (open) {
-    const base = getApiBase()
-    serverUrlInput.value = base === '/api' ? '' : base
-  }
-})
-
-function saveServerUrl() {
-  const v = (serverUrlInput.value || '').trim()
-  if (!v) {
-    setApiBase('')
-    ElMessage.success('已恢复默认地址')
-  } else {
-    if (!v.startsWith('http://') && !v.startsWith('https://')) {
-      ElMessage.warning('请填写以 http:// 或 https:// 开头的完整地址')
-      return
-    }
-    setApiBase(v)
-    ElMessage.success('服务器地址已保存')
-  }
-  showServerUrlDialog.value = false
-}
-
-function clearServerUrl() {
-  serverUrlInput.value = ''
-  setApiBase('')
-  ElMessage.success('已恢复默认地址')
-  showServerUrlDialog.value = false
 }
 
 async function doLogin() {

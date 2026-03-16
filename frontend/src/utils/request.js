@@ -3,30 +3,20 @@ import { ElMessage } from 'element-plus'
 import router from '@/router'
 import { Capacitor } from '@capacitor/core'
 
-const STORAGE_API_BASE = 'elder_api_base'
-
-/** 仅老人端（/m 或 App）使用 localStorage 的服务器地址；管理端始终用当前站点 /api */
+/** 老人端（/m 或 App）使用打包时的默认地址；管理端始终用当前站点 /api */
 export function getApiBase() {
   const isElderSide = typeof window !== 'undefined' && (
     window.location.pathname.startsWith('/m') ||
     Capacitor.isNativePlatform()
   )
   if (isElderSide) {
-    const saved = localStorage.getItem(STORAGE_API_BASE)
-    if (saved != null && saved.trim() !== '') return saved.trim().replace(/\/+$/, '')
+    const base = import.meta.env.VITE_API_BASE || ''
+    if (base) return base.replace(/\/+$/, '')
   }
   return (import.meta.env.VITE_API_BASE || '/api').replace(/\/+$/, '')
 }
 
-export function setApiBase(url) {
-  if (url == null || (typeof url === 'string' && url.trim() === '')) {
-    localStorage.removeItem(STORAGE_API_BASE)
-    return
-  }
-  localStorage.setItem(STORAGE_API_BASE, url.trim().replace(/\/+$/, ''))
-}
-
-const request = axios.create({ baseURL: '/', timeout: 15000 })
+const request = axios.create({ baseURL: '/', timeout: 25000 })
 
 let lastNetworkErrorTip = 0
 const NETWORK_ERROR_COOLDOWN = 3000
@@ -71,7 +61,7 @@ request.interceptors.response.use(
         if (isNetworkError) {
           const isElderSide = router.currentRoute?.value?.path?.startsWith('/m') || Capacitor.isNativePlatform()
           msg = isElderSide
-            ? '无法连接服务器。请到【设置 → 服务器地址】填写后端 API 地址（例如 http://你的公网IP/api）。'
+            ? '无法连接服务器，请检查网络或稍后重试。'
             : '无法连接服务器，请检查网络或稍后重试。'
           const now = Date.now()
           if (now - lastNetworkErrorTip < NETWORK_ERROR_COOLDOWN) return Promise.reject(err)

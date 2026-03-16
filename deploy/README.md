@@ -227,6 +227,48 @@ VITE_API_BASE=https://47.111.26.171.nip.io/api
 
 **证书续期**（每 90 天）：在服务器执行 `sudo certbot renew`，再 `docker compose -f docker-compose.yml -f deploy/docker-compose.https.yml restart frontend`。
 
+### 国内服务器：Let's Encrypt 无法连接时，用阿里云免费证书
+
+国内服务器常无法连接 Let's Encrypt，请改用 **阿里云免费 SSL 证书**。需有一个已备案域名。
+
+详见 **[deploy/SSL-阿里云免费证书.md](SSL-阿里云免费证书.md)**，简要步骤：
+
+1. 阿里云控制台 → 数字证书管理服务 → 免费证书 → 申请（需域名）
+2. 下载 Nginx 格式证书，上传到服务器 `certs/fullchain.pem` 和 `certs/privkey.pem`
+3. 执行：`docker compose -f docker-compose.yml -f deploy/docker-compose.https-aliyun.yml up -d frontend`
+4. 安全组放行 443，`.env.production` 改为 `https://你的域名/api`，重打 APK
+
+### 无域名时：自签名证书（仅限本平台 App）
+
+**没有域名**时，可用自签名证书，让 App 在手机流量下访问 `https://公网IP`。步骤如下：
+
+**1. 本地生成证书（项目根目录）：**
+
+```bash
+cd frontend
+node scripts/generate-self-signed-cert.js
+```
+
+证书会写入 `deploy/certs/` 和 `frontend/android/.../res/raw/server_crt`。若服务器 IP 不是 47.111.26.171，可先设置：`$env:SSL_IP="你的IP"; node scripts/generate-self-signed-cert.js`（PowerShell）。
+
+**2. 上传 certs 到服务器：**
+
+把整个 `deploy/certs/` 目录上传到服务器项目的 `deploy/certs/` 下（脚本已在本地生成好）。
+
+**3. 服务器启动 HTTPS：**
+
+使用自签名专用的 compose 配置（挂载 `deploy/certs`）：
+
+```bash
+docker compose -f docker-compose.yml -f deploy/docker-compose.https-self-signed.yml up -d frontend
+```
+
+`deploy/nginx-ssl-aliyun.conf` 中 `server_name _` 已匹配任意 IP，无需修改。
+
+**4. 安全组放行 443**，在 `frontend/.env.production` 中写 `VITE_API_BASE=https://47.111.26.171/api`，执行 `npm run apk` 重打 APK。
+
+App 内已配置信任 `res/raw/server_crt`，安装新 APK 后即可用手机流量访问。
+
 ---
 
 ## 五、小结

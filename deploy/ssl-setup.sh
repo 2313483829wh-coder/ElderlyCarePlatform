@@ -1,6 +1,9 @@
 #!/bin/bash
 # 为 47.111.26.171.nip.io 获取免费 HTTPS 证书（nip.io 自动解析到你的 IP）
 # 在服务器项目根目录执行：bash deploy/ssl-setup.sh
+#
+# 若报错 "Unable to register account"：国内服务器常无法连接 Let's Encrypt，
+# 请改用阿里云免费证书，详见 deploy/SSL-阿里云免费证书.md
 
 set -e
 DOMAIN="47.111.26.171.nip.io"
