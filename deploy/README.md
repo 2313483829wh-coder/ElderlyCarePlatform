@@ -200,47 +200,9 @@ docker compose ps
 
 手机 4G/5G 常屏蔽 HTTP，需 HTTPS 才能用流量访问。
 
-### 方式：用 nip.io 免费域名（无需购买域名）
+### 推荐：无域名自签名（最简单，有网就能用）
 
-`47.111.26.171.nip.io` 会解析到 `47.111.26.171`，可申请 Let's Encrypt 免费证书。
-
-**在服务器上执行：**
-
-```bash
-# 1. 安装 certbot
-sudo apt update && sudo apt install -y certbot
-
-# 2. 进入项目目录
-cd ~/ElderlyCarePlatform
-
-# 3. 获取证书并启用 HTTPS
-bash deploy/ssl-setup.sh
-```
-
-**4. 安全组放行 443**：阿里云控制台 → 安全组 → 入方向 → 添加端口 **443**。
-
-**5. 本地修改并重打 APK**：在 `frontend/.env.production` 中写：
-```env
-VITE_API_BASE=https://47.111.26.171.nip.io/api
-```
-然后执行 `npm run apk`，安装新 APK 后即可用手机流量访问。
-
-**证书续期**（每 90 天）：在服务器执行 `sudo certbot renew`，再 `docker compose -f docker-compose.yml -f deploy/docker-compose.https.yml restart frontend`。
-
-### 国内服务器：Let's Encrypt 无法连接时，用阿里云免费证书
-
-国内服务器常无法连接 Let's Encrypt，请改用 **阿里云免费 SSL 证书**。需有一个已备案域名。
-
-详见 **[deploy/SSL-阿里云免费证书.md](SSL-阿里云免费证书.md)**，简要步骤：
-
-1. 阿里云控制台 → 数字证书管理服务 → 免费证书 → 申请（需域名）
-2. 下载 Nginx 格式证书，上传到服务器 `certs/fullchain.pem` 和 `certs/privkey.pem`
-3. 执行：`docker compose -f docker-compose.yml -f deploy/docker-compose.https-aliyun.yml up -d frontend`
-4. 安全组放行 443，`.env.production` 改为 `https://你的域名/api`，重打 APK
-
-### 无域名时：自签名证书（仅限本平台 App）
-
-**没有域名**时，可用自签名证书，让 App 在手机流量下访问 `https://公网IP`。步骤如下：
+**没有域名**时，用自签名证书，让 App 在手机流量下像普通 App 一样使用。步骤如下：
 
 **1. 本地生成证书（项目根目录）：**
 
@@ -268,6 +230,15 @@ docker compose -f docker-compose.yml -f deploy/docker-compose.https-self-signed.
 **4. 安全组放行 443**，在 `frontend/.env.production` 中写 `VITE_API_BASE=https://47.111.26.171/api`，执行 `npm run apk` 重打 APK。
 
 App 内已配置信任 `res/raw/server_crt`，安装新 APK 后即可用手机流量访问。
+
+### 有域名时：阿里云免费证书
+
+有已备案域名时，可用 **阿里云免费 SSL 证书**。详见 **[deploy/SSL-阿里云免费证书.md](SSL-阿里云免费证书.md)**：
+
+1. 阿里云控制台 → 数字证书管理服务 → 免费证书 → 申请（需域名）
+2. 下载 Nginx 格式证书，上传到服务器 `certs/fullchain.pem` 和 `certs/privkey.pem`
+3. 执行：`docker compose -f docker-compose.yml -f deploy/docker-compose.https-aliyun.yml up -d frontend`
+4. 安全组放行 443，`.env.production` 改为 `https://你的域名/api`，重打 APK
 
 ---
 

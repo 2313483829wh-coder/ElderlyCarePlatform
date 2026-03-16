@@ -31,40 +31,13 @@ mkdir -p certs
 #          scp xxx.key user@服务器:~/ElderlyCarePlatform/certs/privkey.pem
 ```
 
-### 3. 使用阿里云证书的 Nginx 配置
+### 3. 使用项目自带的 Nginx 配置
 
-复制 nginx 配置并修改证书路径：
-
-```bash
-cp deploy/nginx-ssl.conf deploy/nginx-ssl-aliyun.conf
-```
-
-编辑 `deploy/nginx-ssl-aliyun.conf`，把证书路径改为：
-
-```nginx
-ssl_certificate /etc/ssl/elderlycare/fullchain.pem;
-ssl_certificate_key /etc/ssl/elderlycare/privkey.pem;
-```
-
-并把 `server_name` 改为你的域名（如 `elder.你的域名.com`）。
+项目已包含 `deploy/nginx-ssl-aliyun.conf`，证书路径已配置为 `/etc/ssl/elderlycare/`，`server_name _` 可匹配任意域名/IP。若需指定域名，可编辑该文件将 `server_name _` 改为 `server_name 你的域名;`。
 
 ### 4. 启动 HTTPS
 
-创建 `deploy/docker-compose.https-aliyun.yml`：
-
-```yaml
-services:
-  frontend:
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./certs:/etc/ssl/elderlycare:ro
-      - ./deploy/nginx-ssl-aliyun.conf:/etc/nginx/conf.d/default.conf:ro
-    command: /bin/sh -c "nginx -g 'daemon off;'"
-```
-
-执行：
+项目已包含 `deploy/docker-compose.https-aliyun.yml`，证书需放在项目根目录的 `certs/` 下。执行：
 
 ```bash
 docker compose -f docker-compose.yml -f deploy/docker-compose.https-aliyun.yml up -d frontend

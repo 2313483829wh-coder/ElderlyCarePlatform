@@ -14,13 +14,13 @@ App 内需要配置实际可访问的后端 API 地址。编辑 `frontend/.env.p
 
 ```env
 # 本地测试：使用电脑局域网 IP（手机需与电脑在同一 WiFi）
-VITE_API_BASE=http://192.168.1.100:8000/api
+# VITE_API_BASE=http://192.168.1.100:8000/api
 
-# 生产环境：使用正式域名
-# VITE_API_BASE=https://api.yourdomain.com/api
+# 公网部署（手机流量可用，需 HTTPS）：详见 deploy/README.md 的「启用 HTTPS」
+VITE_API_BASE=https://47.111.26.171/api
 ```
 
-> 请将 `192.168.1.100` 替换为你的电脑在局域网中的实际 IP（可用 `ipconfig` 查看）。
+> **手机流量可用**：运营商会屏蔽 HTTP，必须用 HTTPS。无域名时用自签名证书：执行 `node scripts/generate-self-signed-cert.js`，再按 `deploy/README.md` 部署。
 
 ## 2. 构建 Web 资源
 

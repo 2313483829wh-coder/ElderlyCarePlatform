@@ -11,7 +11,9 @@ backend/staticfiles/
 node_modules/
 dist/
 .env
+.env*
 *.local
+certs/
 
 # IDE
 .vscode/
