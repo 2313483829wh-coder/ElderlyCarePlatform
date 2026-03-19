@@ -98,6 +98,21 @@ CORS_ALLOWED_ORIGINS = os.environ.get(
     'CORS_ALLOWED_ORIGINS', 'http://localhost:5173'
 ).split(',')
 
+# 反向代理 + HTTPS（Nginx）下的 CSRF 配置
+# 通过环境变量 DJANGO_CSRF_TRUSTED_ORIGINS 配置（逗号分隔），否则根据公网 IP 兜底
+_csrf_trusted = os.environ.get('DJANGO_CSRF_TRUSTED_ORIGINS', '').strip()
+if _csrf_trusted:
+    CSRF_TRUSTED_ORIGINS = [o.strip() for o in _csrf_trusted.split(',') if o.strip()]
+else:
+    CSRF_TRUSTED_ORIGINS = [
+        'https://47.111.26.171',
+        'http://47.111.26.171',
+    ]
+
+# 让 Django 正确识别代理转发的 https
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+USE_X_FORWARDED_HOST = True
+
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework_simplejwt.authentication.JWTAuthentication',
