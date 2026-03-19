@@ -3,7 +3,8 @@ import vue from '@vitejs/plugin-vue'
 import path from 'path'
 
 export default defineConfig({
-  base: './',
+  // 必须使用绝对路径，否则在 /m/* 等子路径下会把资源请求成 /m/assets/* 导致返回 index.html（MIME 错误）
+  base: '/',
   plugins: [vue()],
   resolve: {
     alias: {
