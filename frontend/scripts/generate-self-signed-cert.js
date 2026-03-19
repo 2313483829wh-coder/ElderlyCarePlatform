@@ -16,8 +16,10 @@ const attrs = [{ name: 'commonName', value: ip }]
 const notAfter = new Date()
 notAfter.setFullYear(notAfter.getFullYear() + 10)
 const extensions = [
-  { name: 'basicConstraints', cA: false },
-  { name: 'keyUsage', digitalSignature: true, keyEncipherment: true },
+  // Android network-security-config 的 trust-anchors 更适合信任 CA 证书。
+  // 这里将自签名证书标记为 CA，以便 App 内置信任生效。
+  { name: 'basicConstraints', cA: true, critical: true },
+  { name: 'keyUsage', digitalSignature: true, keyEncipherment: true, keyCertSign: true, cRLSign: true, critical: true },
   { name: 'extKeyUsage', serverAuth: true, clientAuth: true },
   { name: 'subjectAltName', altNames: [{ type: 7, ip }], critical: true },
 ]
