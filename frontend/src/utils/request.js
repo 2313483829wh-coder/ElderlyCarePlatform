@@ -2,6 +2,7 @@ import axios from 'axios'
 import { ElMessage } from 'element-plus'
 import router from '@/router'
 import { Capacitor } from '@capacitor/core'
+import { getPreferences } from './preferences'
 
 /** 老人端（/m 或 App）使用打包时的默认地址；管理端始终用当前站点 /api */
 export function getApiBase() {
@@ -59,9 +60,8 @@ request.interceptors.response.use(
           err.code === 'ERR_NETWORK' ||
           (err.message && (err.message.includes('Network Error') || err.message.includes('fetch')))
         if (isNetworkError) {
-          const isElderSide = router.currentRoute?.value?.path?.startsWith('/m') || Capacitor.isNativePlatform()
-          msg = isElderSide
-            ? '无法连接服务器，请检查网络或稍后重试。'
+          msg = getPreferences().language === 'en-US'
+            ? 'Unable to connect to the server. Please check your network and try again.'
             : '无法连接服务器，请检查网络或稍后重试。'
           const now = Date.now()
           if (now - lastNetworkErrorTip < NETWORK_ERROR_COOLDOWN) return Promise.reject(err)

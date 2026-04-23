@@ -21,86 +21,108 @@
       </div>
     </div>
 
-    <!-- 今日数据表 -->
     <div class="form-area" v-if="showForm && isAuthed">
       <div class="form-header">
-        <span>今日健康数据</span>
+        <span>{{ t('todayHealthData') }}</span>
         <el-icon v-if="submitted" class="edit-icon" @click="showFormEdit"><Edit /></el-icon>
       </div>
       <div v-if="!submitted" class="form-fields">
         <div class="form-row">
-          <span class="label">心跳</span>
-          <input v-model.number="form.heart_rate" type="number" placeholder="次/分" />
+          <span class="label">{{ t('heartRate') }}</span>
+          <input v-model.number="form.heart_rate" type="number" :placeholder="t('heartRateUnit')" />
         </div>
         <div class="form-row">
-          <span class="label">血氧</span>
+          <span class="label">{{ t('bloodOxygen') }}</span>
           <input v-model.number="form.blood_oxygen" type="number" step="0.1" placeholder="%" />
         </div>
         <div class="form-row bp">
-          <span class="label">血压</span>
-          <input v-model.number="form.systolic_bp" type="number" placeholder="高压" inputmode="numeric" />
+          <span class="label">{{ t('bloodPressure') }}</span>
+          <input v-model.number="form.systolic_bp" type="number" :placeholder="t('highPressure')" inputmode="numeric" />
           <span class="sep">/</span>
-          <input v-model.number="form.diastolic_bp" type="number" placeholder="低压" inputmode="numeric" />
+          <input v-model.number="form.diastolic_bp" type="number" :placeholder="t('lowPressure')" inputmode="numeric" />
         </div>
         <div class="form-row">
-          <span class="label">体温</span>
+          <span class="label">{{ t('temperature') }}</span>
           <input v-model.number="form.temperature" type="number" step="0.1" placeholder="℃" />
         </div>
         <div class="form-row">
-          <span class="label">血糖</span>
-          <input v-model.number="form.blood_sugar" type="number" step="0.1" placeholder="选填" />
+          <span class="label">{{ t('bloodSugar') }}</span>
+          <input v-model.number="form.blood_sugar" type="number" step="0.1" :placeholder="t('optional')" />
         </div>
         <div class="form-row">
-          <span class="label">感觉</span>
-          <input v-model="form.feeling" type="text" placeholder="今天感觉如何" />
+          <span class="label">{{ t('feeling') }}</span>
+          <input v-model="form.feeling" type="text" :placeholder="t('howFeelingToday')" />
         </div>
         <div class="form-buttons">
           <button class="submit-form-btn" :disabled="submitting" @click="submitHealth">
-            {{ submitting ? '提交中...' : '提交健康数据' }}
+            {{ submitting ? t('submitting') : t('submitHealthData') }}
           </button>
-          <button class="cancel-form-btn" :disabled="submitting" @click="cancelFormEdit">取消</button>
+          <button class="cancel-form-btn" :disabled="submitting" @click="cancelFormEdit">{{ t('cancel') }}</button>
         </div>
       </div>
       <div v-else class="form-summary">
-        <p>心跳 {{ form.heart_rate ?? '-' }} · 血氧 {{ form.blood_oxygen ?? '-' }}% · 血压 {{ form.systolic_bp ?? '-' }}/{{ form.diastolic_bp ?? '-' }} · 体温 {{ form.temperature ?? '-' }}℃</p>
-        <p v-if="form.feeling">感觉：{{ form.feeling }}</p>
+        <p>{{ t('heartRate') }} {{ form.heart_rate ?? '-' }} · {{ t('bloodOxygen') }} {{ form.blood_oxygen ?? '-' }}% · {{ t('bloodPressure') }} {{ form.systolic_bp ?? '-' }}/{{ form.diastolic_bp ?? '-' }} · {{ t('temperature') }} {{ form.temperature ?? '-' }}℃</p>
+        <p v-if="form.feeling">{{ t('feelingPrefix') }}{{ form.feeling }}</p>
       </div>
     </div>
 
     <div class="form-area guest-tip" v-else>
       <div class="form-header">
-        <span>今日健康数据</span>
+        <span>{{ t('todayHealthData') }}</span>
       </div>
-      <div class="form-summary">
-        目前是游客模式：可以和 AI 对话，但不能上报健康数据、不能保存历史对话。请到【设置 → 账号管理】登录/注册后使用完整功能。
+      <div class="form-summary">{{ t('guestHealthTip') }}</div>
+      <button class="submit-form-btn" @click="router.push('/m/settings')">{{ t('goAccount') }}</button>
+    </div>
+
+    <div v-if="attachments.length" class="attachment-bar">
+      <div v-for="item in attachments" :key="item.id" class="attachment-chip">
+        <img v-if="item.preview" :src="item.preview" alt="附件预览" class="attachment-thumb" />
+        <span class="attachment-name">{{ item.name }}</span>
+        <button class="attachment-remove" @click="removeAttachment(item.id)">×</button>
       </div>
-      <button class="submit-form-btn" @click="router.push('/m/settings')">去设置</button>
+      <div class="attachment-tip">{{ t('attachTip') }}</div>
     </div>
 
     <div class="input-area">
+      <button class="tool-btn" :class="{ active: recognizing }" @click="toggleVoice" :disabled="sending || guestLimitReached">
+        <el-icon :size="18"><Microphone /></el-icon>
+      </button>
+      <button class="tool-btn" @click="pickPhoto" :disabled="sending || guestLimitReached">
+        <el-icon :size="18"><CameraFilled /></el-icon>
+      </button>
+      <button class="tool-btn" @click="pickFile" :disabled="sending || guestLimitReached">
+        <el-icon :size="18"><FolderAdd /></el-icon>
+      </button>
       <input
         v-model="inputText"
         type="text"
-        :placeholder="guestLimitReached ? '游客仅可对话 3 条，请登录后继续' : '输入消息，与 AI 交流...'"
+        :placeholder="guestLimitReached ? t('guestLimit') : t('chatPlaceholder')"
         :disabled="guestLimitReached"
         @keydown.enter.exact.prevent="send"
       />
-      <button class="send-btn" :disabled="!inputText.trim() || sending || guestLimitReached" @click="send">
+      <button class="send-btn" :disabled="(!inputText.trim() && !attachments.length) || sending || guestLimitReached" @click="send">
         <el-icon :size="20"><Promotion /></el-icon>
       </button>
     </div>
+
+    <input ref="photoInputRef" type="file" accept="image/*" capture="environment" hidden @change="onFileSelected($event, true)" />
+    <input ref="fileInputRef" type="file" accept="image/*,.pdf,.doc,.docx,.txt" hidden @change="onFileSelected($event, false)" />
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, inject, watch, computed } from 'vue'
+import { ref, reactive, onMounted, onBeforeUnmount, inject, watch, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Edit, Promotion } from '@element-plus/icons-vue'
+import { Edit, Promotion, Microphone, FolderAdd, CameraFilled } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
 import request from '@/utils/request'
 import aiAvatar from '@/assets/ai-avatar.png'
+import { getPreferences } from '@/utils/preferences'
+import { useMobileI18n } from '@/utils/mobileI18n'
 
 const route = useRoute()
 const router = useRouter()
+const { t } = useMobileI18n()
 const messagesRef = ref(null)
 const messages = ref([])
 const inputText = ref('')
@@ -110,22 +132,30 @@ const sessionId = ref(null)
 const submitted = ref(false)
 const showForm = ref(true)
 const submitting = ref(false)
-const isAuthed = inject('isAuthed', ref(!!localStorage.getItem('elder_token')))
+const photoInputRef = ref(null)
+const fileInputRef = ref(null)
+const attachments = ref([])
+const recognizing = ref(false)
+let recognition = null
 
+const isAuthed = inject('isAuthed', ref(!!localStorage.getItem('elder_token')))
 const refreshSessions = inject('refreshSessions', () => {})
 const setCurrentSession = inject('setCurrentSession', () => {})
 
-const guestUserMessageCount = computed(() =>
-  messages.value.filter(m => m.role === 'user').length
-)
-const guestLimitReached = computed(() =>
-  !isAuthed.value && guestUserMessageCount.value >= 3
-)
+const guestUserMessageCount = computed(() => messages.value.filter(m => m.role === 'user').length)
+const guestLimitReached = computed(() => !isAuthed.value && guestUserMessageCount.value >= 3)
 
 const form = reactive({
-  heart_rate: null, blood_oxygen: null, systolic_bp: null, diastolic_bp: null,
-  temperature: null, blood_sugar: null, feeling: '',
+  heart_rate: null,
+  blood_oxygen: null,
+  systolic_bp: null,
+  diastolic_bp: null,
+  temperature: null,
+  blood_sugar: null,
+  feeling: '',
 })
+
+const editSnapshot = ref(null)
 
 function formatContent(text) {
   if (!text) return ''
@@ -138,6 +168,84 @@ function scrollBottom() {
       messagesRef.value.scrollTop = messagesRef.value.scrollHeight
     }
   }, 50)
+}
+
+function getSpeechLanguage() {
+  return getPreferences().language || 'zh-CN'
+}
+
+function buildAttachmentContext() {
+  if (!attachments.value.length) return ''
+  const summary = attachments.value.map(item => `${item.name}（${item.typeLabel}）`).join('、')
+  return `${t('attachedContextPrefix')}${summary}${t('attachedContextSuffix')}`
+}
+
+function clearAttachments() {
+  attachments.value.forEach(item => {
+    if (item.preview) URL.revokeObjectURL(item.preview)
+  })
+  attachments.value = []
+}
+
+function removeAttachment(id) {
+  const current = attachments.value.find(item => item.id === id)
+  if (current?.preview) URL.revokeObjectURL(current.preview)
+  attachments.value = attachments.value.filter(item => item.id !== id)
+}
+
+function pickPhoto() {
+  photoInputRef.value?.click()
+}
+
+function pickFile() {
+  fileInputRef.value?.click()
+}
+
+function onFileSelected(event, fromCamera) {
+  const file = event.target.files?.[0]
+  if (!file) return
+  const isImage = file.type.startsWith('image/')
+  attachments.value.push({
+    id: `${Date.now()}-${Math.random()}`,
+    name: file.name,
+    typeLabel: fromCamera ? t('photoImage') : (isImage ? t('image') : file.type || t('file')),
+    preview: isImage ? URL.createObjectURL(file) : '',
+  })
+  event.target.value = ''
+}
+
+function createRecognition() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
+  if (!SpeechRecognition) return null
+  const instance = new SpeechRecognition()
+  instance.lang = getSpeechLanguage()
+  instance.interimResults = false
+  instance.maxAlternatives = 1
+  instance.onstart = () => { recognizing.value = true }
+  instance.onend = () => { recognizing.value = false }
+  instance.onerror = () => {
+    recognizing.value = false
+    ElMessage.warning(t('voiceUnavailable'))
+  }
+  instance.onresult = event => {
+    const transcript = event.results?.[0]?.[0]?.transcript || ''
+    inputText.value = [inputText.value.trim(), transcript.trim()].filter(Boolean).join(' ')
+  }
+  return instance
+}
+
+function toggleVoice() {
+  if (recognizing.value && recognition) {
+    recognition.stop()
+    return
+  }
+  recognition = createRecognition()
+  if (!recognition) {
+    ElMessage.warning(t('browserNoVoice'))
+    return
+  }
+  recognition.lang = getSpeechLanguage()
+  recognition.start()
 }
 
 async function loadTodayHealth() {
@@ -166,8 +274,6 @@ async function loadTodayHealth() {
   }
 }
 
-const editSnapshot = ref(null)
-
 function showFormEdit() {
   editSnapshot.value = {
     heart_rate: form.heart_rate,
@@ -191,12 +297,12 @@ function cancelFormEdit() {
 
 async function submitHealth() {
   if (!isAuthed.value) {
-    alert('登录后才可以上报健康数据')
+    alert(t('loginRequiredForHealth'))
     router.push('/m/settings')
     return
   }
   if (!form.heart_rate && !form.blood_oxygen && !form.systolic_bp && !form.diastolic_bp && !form.temperature && !form.blood_sugar) {
-    alert('请至少填写一项数据')
+    alert(t('fillAtLeastOne'))
     return
   }
   submitting.value = true
@@ -235,7 +341,6 @@ async function submitHealth() {
 }
 
 async function initOrLoadSession() {
-  // 游客模式：不加载/创建会话，仅本地聊天
   if (!isAuthed.value) {
     sessionId.value = null
     messages.value = [{
@@ -258,17 +363,14 @@ async function initOrLoadSession() {
     return
   }
 
-  // 如果是从右上角“新建对话”进入，则创建新会话
   if (route.query.new) {
     await createNewSession()
-    // 清掉 new 参数，避免刷新重复创建
     const q = { ...route.query }
     delete q.new
     router.replace({ path: '/m/chat', query: q })
     return
   }
 
-  // 否则：默认打开最近一次会话；没有历史才新建
   loading.value = true
   try {
     const list = await request.get('/ai/sessions/')
@@ -316,11 +418,11 @@ async function createNewSession() {
 }
 
 async function sendToAI(content) {
-  // 游客：走匿名接口
+  const userContent = [buildAttachmentContext(), content].filter(Boolean).join('\n')
+
   if (!isAuthed.value) {
     sending.value = true
     loading.value = true
-    const userContent = content
     messages.value.push({
       id: 'u' + Date.now(),
       role: 'user',
@@ -353,6 +455,7 @@ async function sendToAI(content) {
     } finally {
       sending.value = false
       loading.value = false
+      clearAttachments()
       scrollBottom()
     }
     return
@@ -361,7 +464,6 @@ async function sendToAI(content) {
   if (!sessionId.value) return
   sending.value = true
   loading.value = true
-  const userContent = content
   messages.value.push({
     id: 'u' + Date.now(),
     role: 'user',
@@ -388,24 +490,26 @@ async function sendToAI(content) {
   } finally {
     sending.value = false
     loading.value = false
+    clearAttachments()
     scrollBottom()
   }
 }
 
 function send() {
   const t = inputText.value.trim()
-  if (!t || sending.value) return
+  if ((!t && !attachments.value.length) || sending.value) return
   sendToAI(t)
 }
 
 watch(() => route.query.session, () => {
   initOrLoadSession()
 })
+
 watch(() => route.query.new, () => {
   initOrLoadSession()
 })
-// 登录后 isAuthed 变为 true 时，重新加载会话和今日数据
-watch(() => (isAuthed?.value ?? false), (v) => {
+
+watch(() => (isAuthed?.value ?? false), v => {
   if (v) {
     loadTodayHealth()
     initOrLoadSession()
@@ -415,6 +519,18 @@ watch(() => (isAuthed?.value ?? false), (v) => {
 onMounted(async () => {
   await loadTodayHealth()
   await initOrLoadSession()
+})
+
+onBeforeUnmount(() => {
+  if (recognition) {
+    recognition.onend = null
+    recognition.onerror = null
+    recognition.onresult = null
+    try {
+      recognition.stop()
+    } catch {}
+  }
+  clearAttachments()
 })
 </script>
 
@@ -503,12 +619,12 @@ onMounted(async () => {
 
 .form-area {
   flex-shrink: 0;
-  margin: 0 16px 12px;
-  padding: 14px;
+  margin: 0 14px 10px;
+  padding: 12px 14px;
   background: #ffffff;
-  border-radius: 14px;
+  border-radius: 16px;
   border: 1px solid rgba(0, 0, 0, 0.08);
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.04);
 }
 
 .form-header {
@@ -556,18 +672,18 @@ onMounted(async () => {
 
 .form-buttons {
   display: flex;
-  gap: 12px;
-  margin-top: 12px;
+  gap: 10px;
+  margin-top: 10px;
 }
 
 .submit-form-btn {
   flex: 1;
-  padding: 12px;
+  height: 40px;
   background: #111111;
   color: #fff;
   border: none;
-  border-radius: 10px;
-  font-size: 16px;
+  border-radius: 12px;
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
 }
@@ -577,12 +693,13 @@ onMounted(async () => {
 }
 
 .cancel-form-btn {
-  padding: 12px 20px;
+  min-width: 72px;
+  height: 40px;
   background: transparent;
   color: #6e6e73;
   border: 1px solid rgba(0, 0, 0, 0.15);
-  border-radius: 10px;
-  font-size: 16px;
+  border-radius: 12px;
+  font-size: 14px;
   cursor: pointer;
 }
 
@@ -591,7 +708,7 @@ onMounted(async () => {
 }
 
 .guest-tip {
-  margin-bottom: 16px;
+  margin-bottom: 12px;
 }
 
 .form-summary {
@@ -600,24 +717,91 @@ onMounted(async () => {
   line-height: 1.6;
 }
 
+.attachment-bar {
+  padding: 0 14px 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.96);
+}
+
+.attachment-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #f2f2f7;
+  padding: 6px 10px;
+  border-radius: 12px;
+}
+
+.attachment-thumb {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  object-fit: cover;
+}
+
+.attachment-name {
+  font-size: 13px;
+  color: #1d1d1f;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.attachment-remove {
+  border: none;
+  background: transparent;
+  color: #6e6e73;
+  font-size: 18px;
+  cursor: pointer;
+}
+
+.attachment-tip {
+  width: 100%;
+  font-size: 12px;
+  color: #6e6e73;
+  line-height: 1.4;
+}
+
 .input-area {
   flex-shrink: 0;
   display: flex;
-  gap: 10px;
-  padding: 12px 16px;
-  padding-bottom: 20px;
+  gap: 8px;
+  padding: 10px 14px 16px;
   background: rgba(255, 255, 255, 0.96);
   border-top: 1px solid rgba(0, 0, 0, 0.06);
 }
 
+.tool-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: #f6f6f8;
+  color: #4b5563;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.tool-btn.active {
+  background: #e9eef7;
+  color: #111111;
+  border-color: rgba(17, 17, 17, 0.08);
+}
+
 .input-area input {
   flex: 1;
-  padding: 12px 16px;
+  height: 38px;
+  padding: 0 14px;
   background: #f2f2f7;
   border: 1px solid rgba(0, 0, 0, 0.08);
-  border-radius: 22px;
+  border-radius: 14px;
   color: #1d1d1f;
-  font-size: 16px;
+  font-size: 15px;
 }
 
 .input-area input::placeholder {
@@ -625,9 +809,9 @@ onMounted(async () => {
 }
 
 .send-btn {
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
   background: #111111;
   color: #fff;
   border: none;

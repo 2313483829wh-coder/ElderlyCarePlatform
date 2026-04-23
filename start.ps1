@@ -8,9 +8,9 @@ Start-Process powershell -ArgumentList "-NoExit", "-Command", @"
 cd '$projectRoot\backend'
 if (Test-Path venv\Scripts\Activate.ps1) {
     .\venv\Scripts\Activate.ps1
-    python manage.py runserver 8000
+    python manage.py runserver 8000 --noreload
 } else {
-    python manage.py runserver 8000
+    python manage.py runserver 8000 --noreload
 }
 "@
 

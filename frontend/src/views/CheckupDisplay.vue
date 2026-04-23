@@ -36,20 +36,44 @@
     <el-descriptions-item label="综合结论">{{ checkup.overall_result || '—' }}</el-descriptions-item>
     <el-descriptions-item label="医生建议">{{ checkup.doctor_advice || '—' }}</el-descriptions-item>
     <el-descriptions-item label="体检报告">
-      <el-link v-if="checkup.report_file" :href="checkup.report_file" target="_blank" type="primary">
-        查看报告
-      </el-link>
+      <div v-if="reportUrl" class="report-wrap">
+        <img v-if="isImageReport" class="report-image" :src="reportUrl" alt="体检报告图片" />
+        <el-link :href="reportUrl" target="_blank" type="primary">查看报告</el-link>
+      </div>
       <span v-else>无</span>
     </el-descriptions-item>
   </el-descriptions>
 </template>
 
 <script setup>
-import { defineProps } from 'vue'
+import { defineProps, computed } from 'vue'
 import CheckupMetricStatus from './CheckupMetricStatus.vue'
 
 const props = defineProps({
   checkup: Object,
   thresholds: Object, // 接收健康阈值
 })
+
+const reportUrl = computed(() => props.checkup?.report_file_url || props.checkup?.report_file || '')
+const isImageReport = computed(() => {
+  const url = (reportUrl.value || '').toLowerCase()
+  return ['.png', '.jpg', '.jpeg', '.webp', '.bmp', '.gif', '.heic'].some(ext => url.includes(ext))
+})
 </script>
+
+<style scoped>
+.report-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.report-image {
+  max-width: 100%;
+  max-height: 240px;
+  object-fit: contain;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #fafafa;
+}
+</style>

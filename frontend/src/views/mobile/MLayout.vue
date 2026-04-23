@@ -4,9 +4,15 @@
       <div v-if="route.path !== '/m/settings'" class="ds-hamburger" @click="drawerVisible = true">
         <el-icon :size="24"><Fold /></el-icon>
       </div>
-      <h1 v-if="route.path !== '/m/settings'" class="ds-title">健康助手</h1>
+      <h1 v-if="route.path !== '/m/settings'" class="ds-title">{{ t('healthAssistant') }}</h1>
       <div class="ds-header-spacer"></div>
-      <button v-if="route.path !== '/m/settings'" class="ds-newchat" :disabled="!isAuthed" @click="newChatFromTop" :title="isAuthed ? '新建对话' : '登录后可新建对话'">
+      <button
+        v-if="route.path !== '/m/settings'"
+        class="ds-newchat"
+        :disabled="!isAuthed"
+        @click="newChatFromTop"
+        :title="isAuthed ? '新建对话' : '登录后可新建对话'"
+      >
         <el-icon :size="20"><Plus /></el-icon>
       </button>
     </header>
@@ -17,7 +23,7 @@
 
     <el-drawer
       v-model="drawerVisible"
-      title="历史对话"
+      :title="t('historyChats')"
       direction="ltr"
       size="85%"
       class="history-drawer"
@@ -41,32 +47,54 @@
       </div>
 
       <div v-else class="guest-drawer">
-        <div class="guest-title">游客模式</div>
-        <div class="guest-desc">
-          你可以直接在首页和 AI 对话；登录后可上报健康数据、保存历史对话、创建新对话。
-        </div>
-        <button class="guest-btn" @click="goPerson">去设置 → 账号管理 登录/注册</button>
+        <div class="guest-title">{{ t('guestMode') }}</div>
+        <div class="guest-desc">{{ t('guestDesc') }}</div>
+        <button class="guest-btn" @click="goPerson">{{ t('goAccount') }}</button>
       </div>
 
       <div v-if="isAuthed" class="drawer-footer">
         <div class="footer-item" @click="goTo('/m/history')">
           <el-icon><Document /></el-icon>
-          <span>我的健康记录</span>
+          <span>{{ t('myHealthRecords') }}</span>
+          <el-icon class="arrow"><ArrowRight /></el-icon>
+        </div>
+        <div class="footer-item" @click="goTo('/m/service')">
+          <el-icon><Calendar /></el-icon>
+          <span>服务预约</span>
+          <el-icon class="arrow"><ArrowRight /></el-icon>
+        </div>
+        <div class="footer-item" @click="goTo('/m/sos')">
+          <el-icon><Warning /></el-icon>
+          <span>紧急求助</span>
+          <el-icon class="arrow"><ArrowRight /></el-icon>
+        </div>
+        <div class="footer-item" @click="goTo('/m/medication')">
+          <el-icon><FirstAidKit /></el-icon>
+          <span>我的用药</span>
           <el-icon class="arrow"><ArrowRight /></el-icon>
         </div>
         <div class="footer-item" @click="goTo('/m/checkup')">
           <el-icon><Notebook /></el-icon>
-          <span>我的体检报告</span>
+          <span>{{ t('myCheckupReports') }}</span>
+          <el-icon class="arrow"><ArrowRight /></el-icon>
+        </div>
+        <div class="footer-item" @click="goTo('/m/announcements')">
+          <el-icon><Bell /></el-icon>
+          <span>社区公告</span>
+          <el-icon class="arrow"><ArrowRight /></el-icon>
+        </div>
+        <div class="footer-item" @click="goTo('/m/activities')">
+          <el-icon><Flag /></el-icon>
+          <span>活动报名</span>
           <el-icon class="arrow"><ArrowRight /></el-icon>
         </div>
         <div class="footer-item" @click="goPerson">
           <el-icon><User /></el-icon>
-          <span>设置</span>
+          <span>{{ t('settings') }}</span>
           <el-icon class="arrow"><ArrowRight /></el-icon>
         </div>
       </div>
 
-      <!-- 长按菜单 -->
       <Teleport to="body">
         <div v-if="menuSession" class="session-menu-overlay" @click.self="closeSessionMenu">
           <div class="session-menu">
@@ -84,11 +112,14 @@
 <script setup>
 import { ref, onMounted, provide, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { Fold, User, Plus, ArrowRight, Document, Notebook } from '@element-plus/icons-vue'
+import { Fold, User, Plus, ArrowRight, Document, Notebook, Bell, Calendar, Warning, FirstAidKit, Flag } from '@element-plus/icons-vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import request from '@/utils/request'
+import { useMobileI18n } from '@/utils/mobileI18n'
 
 const router = useRouter()
 const route = useRoute()
+const { t } = useMobileI18n()
 const drawerVisible = ref(false)
 const sessions = ref([])
 const currentSessionId = ref(null)
@@ -105,7 +136,7 @@ function refreshAuth() {
 provide('sessions', sessions)
 provide('currentSessionId', currentSessionId)
 provide('refreshSessions', loadSessions)
-provide('setCurrentSession', (id) => { currentSessionId.value = id })
+provide('setCurrentSession', id => { currentSessionId.value = id })
 provide('isAuthed', isAuthed)
 provide('refreshAuth', refreshAuth)
 
@@ -113,7 +144,7 @@ async function loadSessions() {
   try {
     sessions.value = await request.get('/ai/sessions/')
   } catch (e) {
-    console.error('加载会话失败', e)
+    ElMessage.error('加载历史对话失败，请稍后重试')
   }
 }
 
@@ -158,11 +189,11 @@ function goTo(path) {
 function onSessionTouchStart(ev, id) {
   longPressTarget.value = null
   if (longPressTimer.value) clearTimeout(longPressTimer.value)
-  const s = sessions.value.find((x) => x.id === id)
-  if (!s) return
+  const session = sessions.value.find(item => item.id === id)
+  if (!session) return
   longPressTimer.value = setTimeout(() => {
     longPressTarget.value = id
-    menuSession.value = s
+    menuSession.value = session
     longPressTimer.value = null
   }, 500)
 }
@@ -174,9 +205,9 @@ function onSessionTouchEnd() {
   }
 }
 
-function openSessionMenu(s) {
-  menuSession.value = s
-  longPressTarget.value = s.id
+function openSessionMenu(session) {
+  menuSession.value = session
+  longPressTarget.value = session.id
 }
 
 function closeSessionMenu() {
@@ -185,12 +216,12 @@ function closeSessionMenu() {
 }
 
 async function doDeleteSession() {
-  const s = menuSession.value
-  if (!s) return
-  if (!confirm('确定删除该对话？')) return
+  const session = menuSession.value
+  if (!session) return
   try {
-    await request.delete('/ai/session-delete/', { params: { session_id: s.id } })
-    const wasCurrent = currentSessionId.value === s.id
+    await ElMessageBox.confirm('确定删除该对话？', '提示', { type: 'warning' })
+    await request.delete('/ai/session-delete/', { params: { session_id: session.id } })
+    const wasCurrent = currentSessionId.value === session.id
     if (wasCurrent) currentSessionId.value = null
     await loadSessions()
     if (sessions.value.length === 0) {
@@ -203,39 +234,46 @@ async function doDeleteSession() {
       router.push('/m/chat')
     }
   } catch (e) {
-    alert('删除失败')
+    if (e !== 'cancel' && e !== 'close') ElMessage.error('删除失败，请稍后重试')
   }
   closeSessionMenu()
 }
 
 async function doRenameSession() {
-  const s = menuSession.value
-  if (!s) return
-  const name = prompt('输入新名称', s.title || '健康咨询')
-  if (name == null || name.trim() === '') {
-    closeSessionMenu()
-    return
-  }
+  const session = menuSession.value
+  if (!session) return
   try {
-    await request.patch('/ai/session-update/', { session_id: s.id, title: name.trim() })
-    const idx = sessions.value.findIndex((x) => x.id === s.id)
-    if (idx >= 0) sessions.value[idx].title = name.trim()
+    const { value } = await ElMessageBox.prompt('输入新名称', '重命名对话', {
+      inputValue: session.title || '健康咨询',
+      inputPlaceholder: '请输入对话名称',
+      confirmButtonText: '保存',
+      cancelButtonText: '取消',
+      inputValidator: value => (value || '').trim() ? true : '请输入对话名称',
+    })
+    const name = (value || '').trim()
+    if (!name) {
+      closeSessionMenu()
+      return
+    }
+    await request.patch('/ai/session-update/', { session_id: session.id, title: name })
+    const idx = sessions.value.findIndex(item => item.id === session.id)
+    if (idx >= 0) sessions.value[idx].title = name
   } catch (e) {
-    alert('重命名失败')
+    if (e !== 'cancel' && e !== 'close') ElMessage.error('重命名失败，请稍后重试')
   }
   closeSessionMenu()
 }
 
 async function doPinSession() {
-  const s = menuSession.value
-  if (!s) return
+  const session = menuSession.value
+  if (!session) return
   try {
-    await request.patch('/ai/session-update/', { session_id: s.id, is_pinned: !s.is_pinned })
-    const idx = sessions.value.findIndex((x) => x.id === s.id)
-    if (idx >= 0) sessions.value[idx].is_pinned = !s.is_pinned
-    loadSessions()
+    await request.patch('/ai/session-update/', { session_id: session.id, is_pinned: !session.is_pinned })
+    const idx = sessions.value.findIndex(item => item.id === session.id)
+    if (idx >= 0) sessions.value[idx].is_pinned = !session.is_pinned
+    await loadSessions()
   } catch (e) {
-    alert('操作失败')
+    ElMessage.error('操作失败，请稍后重试')
   }
   closeSessionMenu()
 }
@@ -243,7 +281,7 @@ async function doPinSession() {
 onMounted(() => {
   if (isAuthed.value) loadSessions()
 })
-// 路由变化时同步 auth 状态，确保登录后跳转时子组件拿到最新 isAuthed
+
 watch(() => route.path, () => { refreshAuth() })
 </script>
 
@@ -337,47 +375,6 @@ watch(() => route.path, () => { refreshAuth() })
 .session-menu-overlay {
   position: fixed;
   inset: 0;
-  z-index: 3000;
-  background: rgba(0, 0, 0, 0.4);
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-}
-
-.session-menu {
-  width: 100%;
-  max-width: 400px;
-  background: #fff;
-  border-radius: 16px 16px 0 0;
-  padding: 16px;
-  padding-bottom: calc(16px + env(safe-area-inset-bottom));
-}
-
-.session-menu .menu-btn {
-  display: block;
-  width: 100%;
-  padding: 14px;
-  margin-bottom: 8px;
-  border: none;
-  border-radius: 12px;
-  background: #f2f2f7;
-  color: #1d1d1f;
-  font-size: 16px;
-  cursor: pointer;
-}
-
-.session-menu .menu-btn.danger {
-  background: #fff5f5;
-  color: #d70015;
-}
-
-.session-item.pinned {
-  border-left: 3px solid #111111;
-}
-
-.session-menu-overlay {
-  position: fixed;
-  inset: 0;
   z-index: 9999;
   background: rgba(0, 0, 0, 0.4);
   display: flex;
@@ -451,12 +448,12 @@ watch(() => route.path, () => { refreshAuth() })
 
 .guest-btn {
   width: 100%;
-  padding: 12px 14px;
+  height: 40px;
   background: #111111;
   color: #ffffff;
   border: none;
   border-radius: 12px;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 700;
   cursor: pointer;
 }
@@ -499,19 +496,11 @@ watch(() => route.path, () => { refreshAuth() })
   font-size: 14px;
 }
 
-.footer-item.danger {
-  color: #d70015;
-}
-
-.footer-item.danger .el-icon {
-  color: #d70015;
-}
-
 :deep(.el-drawer__header) {
   margin-bottom: 0;
   padding: 16px;
   color: #1d1d1f;
-  border-bottom: 1px solid rgba(0,0,0,0.08);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
 }
 
 :deep(.el-drawer__body) {

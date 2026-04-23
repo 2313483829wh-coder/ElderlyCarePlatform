@@ -2,6 +2,7 @@ from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from .models import Elder
+from .utils import ensure_elder_profile
 
 User = get_user_model()
 
@@ -12,7 +13,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
         data = super().validate(attrs)
         user = self.user
-        elder = getattr(user, 'elder_profile', None)
+        elder = ensure_elder_profile(user)
         if elder:
             from apps.community.models import Community
             community = Community.objects.filter(pk=elder.community_id).first()

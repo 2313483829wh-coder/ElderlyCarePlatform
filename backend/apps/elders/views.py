@@ -5,6 +5,7 @@ from rest_framework.response import Response
 from rest_framework_simplejwt.views import TokenObtainPairView
 from django.contrib.auth import get_user_model
 from .models import Elder
+from .utils import ensure_elder_profile
 from .serializers import (
     ElderSerializer, ElderSimpleSerializer,
     UserSerializer, UserCreateSerializer,
@@ -31,24 +32,12 @@ class UserViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'])
     def me(self, request):
+        ensure_elder_profile(request.user)
         ser = UserSerializer(request.user)
         return Response(ser.data)
 
     def _ensure_elder_profile(self, user):
-        """老人端：若未关联档案则尝试按身份证号(username)自动恢复关联"""
-        if user.elder_profile:
-            return user.elder_profile
-        if getattr(user, 'role', None) != 'elder' or not (user.username or '').strip():
-            return None
-        id_card = (user.username or '').strip()
-        if len(id_card) not in (15, 18):
-            return None
-        elder = Elder.objects.filter(id_card=id_card).first()
-        if elder:
-            user.elder_profile = elder
-            user.save(update_fields=['elder_profile_id'])
-            return elder
-        return None
+        return ensure_elder_profile(user)
 
     @action(detail=False, methods=['patch'], url_path='update-phone')
     def update_phone(self, request):

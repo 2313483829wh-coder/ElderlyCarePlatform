@@ -41,9 +41,10 @@ TODAY_FORM_PROMPT = """【今日健康数据表】
 • 今日感觉(选填)："""
 
 
-def get_deepseek_response(messages, api_key=None):
+def get_deepseek_response(messages, api_key=None, timeout_seconds=None):
     """调用 DeepSeek API"""
     key = api_key or getattr(settings, 'DEEPSEEK_API_KEY', None)
+    timeout = timeout_seconds or getattr(settings, 'DEEPSEEK_TIMEOUT_SECONDS', 12)
     if not key:
         return None, '未配置 DeepSeek API Key'
     try:
@@ -56,7 +57,7 @@ def get_deepseek_response(messages, api_key=None):
                 'temperature': 0.7,
                 'max_tokens': 1024,
             },
-            timeout=60,
+            timeout=timeout,
         )
         resp.raise_for_status()
         data = resp.json()
@@ -236,7 +237,15 @@ class ChatViewSet(viewsets.ViewSet):
 
         reply, err = get_deepseek_response(messages)
         if err:
-            return Response({'detail': f'AI暂时不可用：{err}'}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+            # 本地调试或外部 AI 临时不可用时，返回兜底文案，避免前端直接报错中断流程
+            fallback = '您好，我这会儿网络有点忙，暂时无法连接智能服务。您可以先填写今日健康数据，稍后我再继续帮您分析。'
+            return Response({
+                'assistant_message': {
+                    'id': 'public-fallback',
+                    'role': 'assistant',
+                    'content': fallback,
+                }
+            })
 
         return Response({
             'assistant_message': {

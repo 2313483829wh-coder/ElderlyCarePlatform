@@ -7,8 +7,10 @@ import * as ElementPlusIconsVue from '@element-plus/icons-vue'
 import App from './App.vue'
 import router from './router'
 import './styles/global.scss'
+import { applyPreferences, getPreferences } from './utils/preferences'
 
 const app = createApp(App)
+applyPreferences(getPreferences())
 for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
   app.component(key, component)
 }

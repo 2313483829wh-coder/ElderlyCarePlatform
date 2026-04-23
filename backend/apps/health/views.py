@@ -6,24 +6,7 @@ from django.conf import settings
 from .models import DailyHealth
 from .serializers import DailyHealthSerializer, HealthSubmitSerializer
 from apps.alerts.models import Alert
-from apps.elders.models import Elder
-
-
-def _get_elder_for_user(user):
-    """老人端：若已关联档案则返回，否则尝试按身份证号(username)自动恢复关联"""
-    if user.elder_profile:
-        return user.elder_profile
-    if getattr(user, 'role', None) != 'elder' or not (user.username or '').strip():
-        return None
-    id_card = (user.username or '').strip()
-    if len(id_card) not in (15, 18):
-        return None
-    elder = Elder.objects.filter(id_card=id_card).first()
-    if elder:
-        user.elder_profile = elder
-        user.save(update_fields=['elder_profile_id'])
-        return elder
-    return None
+from apps.elders.utils import ensure_elder_profile
 
 
 class DailyHealthViewSet(viewsets.ModelViewSet):
@@ -41,7 +24,7 @@ class DailyHealthViewSet(viewsets.ModelViewSet):
     def submit_today(self, request):
         """老人端：提交今日健康数据"""
         user = request.user
-        elder = _get_elder_for_user(user)
+        elder = ensure_elder_profile(user)
         if not elder:
             return Response({'detail': '未关联老人档案'}, status=status.HTTP_400_BAD_REQUEST)
         today = date.today()
@@ -109,7 +92,7 @@ class DailyHealthViewSet(viewsets.ModelViewSet):
     def my_today(self, request):
         """老人端：获取今日健康数据"""
         user = request.user
-        elder = _get_elder_for_user(user)
+        elder = ensure_elder_profile(user)
         if not elder:
             return Response({'detail': '未关联老人档案'}, status=status.HTTP_400_BAD_REQUEST)
         today = date.today()
@@ -123,7 +106,7 @@ class DailyHealthViewSet(viewsets.ModelViewSet):
     def my_history(self, request):
         """老人端：查看自己的健康数据历史"""
         user = request.user
-        elder = _get_elder_for_user(user)
+        elder = ensure_elder_profile(user)
         if not elder:
             return Response([])
         records = DailyHealth.objects.filter(elder=elder).order_by('-date')[:30]

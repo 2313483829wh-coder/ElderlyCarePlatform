@@ -6,6 +6,7 @@ class CheckupSerializer(serializers.ModelSerializer):
     elder_name = serializers.CharField(source='elder.name', read_only=True)
     community_name = serializers.CharField(source='elder.community.name', read_only=True)
     blood_pressure = serializers.SerializerMethodField() # 新增用于前端展示
+    report_file_url = serializers.SerializerMethodField()
 
     class Meta:
         model = Checkup
@@ -15,6 +16,13 @@ class CheckupSerializer(serializers.ModelSerializer):
         if obj.systolic_bp and obj.diastolic_bp:
             return f'{obj.systolic_bp}/{obj.diastolic_bp}'
         return ''
+
+    def get_report_file_url(self, obj):
+        if not obj.report_file:
+            return ''
+        request = self.context.get('request')
+        url = obj.report_file.url
+        return request.build_absolute_uri(url) if request else url
 
 
 class CheckupMissingSerializer(serializers.Serializer):

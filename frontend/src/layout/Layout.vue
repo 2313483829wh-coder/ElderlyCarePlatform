@@ -10,9 +10,25 @@
           <el-icon><OfficeBuilding /></el-icon>
           <span>社区管理</span>
         </el-menu-item>
+        <el-menu-item index="/service-orders">
+          <el-icon><Tickets /></el-icon>
+          <span>工单中心</span>
+        </el-menu-item>
         <el-menu-item index="/checkup">
           <el-icon><Document /></el-icon>
           <span>体检管理</span>
+        </el-menu-item>
+        <el-menu-item index="/medications">
+          <el-icon><FirstAidKit /></el-icon>
+          <span>用药管理</span>
+        </el-menu-item>
+        <el-menu-item index="/activities">
+          <el-icon><Calendar /></el-icon>
+          <span>活动管理</span>
+        </el-menu-item>
+        <el-menu-item index="/announcements">
+          <el-icon><ChatLineSquare /></el-icon>
+          <span>公告中心</span>
         </el-menu-item>
         <el-menu-item index="/alerts" class="alerts-menu-item">
           <el-icon><Bell /></el-icon>
@@ -47,6 +63,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { ChatLineSquare, Tickets, FirstAidKit, Calendar, House, OfficeBuilding, Document, Bell, User, SwitchButton } from '@element-plus/icons-vue'
 import request from '@/utils/request'
 
 const router = useRouter()
@@ -66,15 +83,16 @@ onMounted(async () => {
 </script>
 
 <style lang="scss" scoped>
-.app-layout { 
-  height: 100vh; 
+.app-layout {
+  height: 100vh;
   background: #f5f5f7;
 }
+
 .app-aside {
   background: #fff;
   border-right: 1px solid #e5e5e7;
   transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-  
+
   .logo {
     height: 72px;
     display: flex;
@@ -87,12 +105,12 @@ onMounted(async () => {
     color: #1d1d1f;
     border-bottom: 1px solid #e5e5e7;
   }
-  
+
   .el-menu {
     border-right: none;
     background: transparent;
     padding: 12px;
-    
+
     :deep(.el-menu-item) {
       margin: 4px 0;
       border-radius: 10px;
@@ -101,28 +119,28 @@ onMounted(async () => {
       font-size: 15px;
       color: #1d1d1f;
       transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
-      
+
       &:hover {
         background: #f5f5f7;
         color: #0066cc;
       }
-      
+
       &.is-active {
         background: #0066cc;
         color: #fff;
         font-weight: 500;
       }
-      
+
       .el-icon {
         margin-right: 8px;
       }
     }
   }
-  
+
   .alerts-menu-item {
     position: relative;
   }
-  
+
   .alert-dot {
     position: absolute;
     right: 8px;
@@ -154,14 +172,14 @@ onMounted(async () => {
   position: sticky;
   top: 0;
   z-index: 100;
-  
+
   .page-title {
     font-size: 22px;
     font-weight: 600;
     letter-spacing: -0.5px;
     color: #1d1d1f;
   }
-  
+
   .header-user {
     display: flex;
     align-items: center;
@@ -172,7 +190,7 @@ onMounted(async () => {
     font-size: 15px;
     color: #1d1d1f;
     transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
-    
+
     &:hover {
       background: #f5f5f7;
     }

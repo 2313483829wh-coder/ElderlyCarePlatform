@@ -7,3 +7,6 @@ except ImportError:
 
 if pymysql is not None:
     pymysql.install_as_MySQLdb()
+
+# Improve local sqlite concurrency without affecting MySQL deployments.
+from . import sqlite_compat  # noqa: F401,E402

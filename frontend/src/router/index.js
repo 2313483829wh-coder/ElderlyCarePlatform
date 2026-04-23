@@ -33,6 +33,26 @@ const routes = [
         meta: { title: '体检管理' },
       },
       {
+        path: 'announcements',
+        component: () => import('@/views/Announcements.vue'),
+        meta: { title: '公告中心' },
+      },
+      {
+        path: 'service-orders',
+        component: () => import('@/views/ServiceOrders.vue'),
+        meta: { title: '工单中心' },
+      },
+      {
+        path: 'medications',
+        component: () => import('@/views/MedicationAdmin.vue'),
+        meta: { title: '用药管理' },
+      },
+      {
+        path: 'activities',
+        component: () => import('@/views/Activities.vue'),
+        meta: { title: '活动管理' },
+      },
+      {
         path: 'checkup/elder/:elderId',
         component: () => import('@/views/CheckupDetail.vue'),
         meta: { title: '体检记录' },
@@ -79,6 +99,31 @@ const routes = [
         component: () => import('@/views/mobile/MCheckup.vue'),
         meta: { title: '体检报告' },
       },
+      {
+        path: 'announcements',
+        component: () => import('@/views/mobile/MAnnouncements.vue'),
+        meta: { title: '社区公告' },
+      },
+      {
+        path: 'activities',
+        component: () => import('@/views/mobile/MActivities.vue'),
+        meta: { title: '活动报名' },
+      },
+      {
+        path: 'service',
+        component: () => import('@/views/mobile/MService.vue'),
+        meta: { title: '服务预约' },
+      },
+      {
+        path: 'sos',
+        component: () => import('@/views/mobile/MSOS.vue'),
+        meta: { title: '紧急求助' },
+      },
+      {
+        path: 'medication',
+        component: () => import('@/views/mobile/MMedication.vue'),
+        meta: { title: '我的用药' },
+      },
     ],
   },
 ]
@@ -86,7 +131,6 @@ const routes = [
 const router = createRouter({ history: createWebHistory(import.meta.env.BASE_URL), routes })
 
 router.beforeEach((to, from, next) => {
-  // 老人端 App / 手机端：只显示老人端，任何管理端路径都进 /m/chat
   if (Capacitor.isNativePlatform() && !to.path.startsWith('/m')) {
     next('/m/chat')
     return
@@ -95,9 +139,18 @@ router.beforeEach((to, from, next) => {
   const isMobile = to.path.startsWith('/m')
   const loginPath = isMobile ? '/m/settings' : '/login'
   const tokenKey = isMobile ? 'elder_token' : 'token'
-  
-  // 老人端：允许游客进入对话页、设置、账号管理
-  if (to.path === '/login' || to.path === '/m/settings' || to.path === '/m/chat' || to.path === '/m/account') {
+
+  if (
+    to.path === '/login' ||
+    to.path === '/m/settings' ||
+    to.path === '/m/chat' ||
+    to.path === '/m/account' ||
+    to.path === '/m/announcements' ||
+    to.path === '/m/activities' ||
+    to.path === '/m/service' ||
+    to.path === '/m/sos' ||
+    to.path === '/m/medication'
+  ) {
     next()
   } else if (!localStorage.getItem(tokenKey)) {
     next(loginPath)

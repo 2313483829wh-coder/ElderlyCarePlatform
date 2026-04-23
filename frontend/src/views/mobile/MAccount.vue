@@ -128,21 +128,21 @@ async function loadMyPhone() {
     const user = await request.get('/auth/users/me/')
     phone.value = user.phone || ''
   } catch (e) {
-    console.error(e)
+    ElMessage.error('加载账号信息失败，请稍后重试')
   }
 }
 
 async function savePhone() {
   const v = (phone.value || '').trim()
-  if (!v) return alert('请输入手机号')
-  if (v.length !== 11 || !/^\d+$/.test(v)) return alert('请输入正确的11位手机号')
+  if (!v) return ElMessage.warning('请输入手机号')
+  if (v.length !== 11 || !/^\d+$/.test(v)) return ElMessage.warning('请输入正确的11位手机号')
   phoneLoading.value = true
   try {
     await request.patch('/auth/users/update-phone/', { phone: v })
-    alert('修改成功')
+    ElMessage.success('修改成功')
   } catch (e) {
     const msg = e?.response?.data?.phone?.[0] || '修改失败，请重试'
-    alert(msg)
+    ElMessage.error(msg)
   } finally {
     phoneLoading.value = false
   }
@@ -187,8 +187,8 @@ async function loadPublicCommunities() {
 }
 
 async function doLogin() {
-  if (!loginForm.username) return alert('请输入身份证号')
-  if (!loginForm.password) return alert('请输入密码')
+  if (!loginForm.username) return ElMessage.warning('请输入身份证号')
+  if (!loginForm.password) return ElMessage.warning('请输入密码')
   authLoading.value = true
   try {
     const res = await request.post('/auth/login/', loginForm)

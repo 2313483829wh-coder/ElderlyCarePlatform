@@ -17,6 +17,8 @@ urlpatterns = [
     path('api/checkup/', include('apps.checkup.urls')),
     path('api/alerts/', include('apps.alerts.urls')),
     path('api/ai/', include('apps.ai.urls')),
+    path('api/announcements/', include('apps.announcements.urls')),
+    path('api/care/', include('apps.care.urls')),
 ]
 
 if settings.DEBUG:

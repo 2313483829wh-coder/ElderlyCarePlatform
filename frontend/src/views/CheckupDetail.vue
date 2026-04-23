@@ -16,10 +16,15 @@
         <el-card shadow="hover">
           <template #header>
             <div class="card-header">
-              <span>第一次体检 (上半年)</span>
-              <el-tag :type="firstCheckup?.id ? 'success' : 'info'" size="small">
-                {{ firstCheckup?.id ? '已录入' : '未录入' }}
-              </el-tag>
+              <div class="header-main">
+                <span>第一次体检 (上半年)</span>
+                <el-tag :type="firstCheckup?.id ? 'success' : 'info'" size="small">
+                  {{ firstCheckup?.id ? '已录入' : '未录入' }}
+                </el-tag>
+              </div>
+              <el-button v-if="firstCheckup?.id" text type="primary" @click="openEditDialog(firstCheckup)">
+                修改体检结果
+              </el-button>
             </div>
           </template>
           <el-empty v-if="!firstCheckup?.id" description="暂无第一次体检记录" />
@@ -30,10 +35,15 @@
         <el-card shadow="hover">
           <template #header>
             <div class="card-header">
-              <span>第二次体检 (下半年)</span>
-              <el-tag :type="secondCheckup?.id ? 'success' : 'info'" size="small">
-                {{ secondCheckup?.id ? '已录入' : '未录入' }}
-              </el-tag>
+              <div class="header-main">
+                <span>第二次体检 (下半年)</span>
+                <el-tag :type="secondCheckup?.id ? 'success' : 'info'" size="small">
+                  {{ secondCheckup?.id ? '已录入' : '未录入' }}
+                </el-tag>
+              </div>
+              <el-button v-if="secondCheckup?.id" text type="primary" @click="openEditDialog(secondCheckup)">
+                修改体检结果
+              </el-button>
             </div>
           </template>
           <el-empty v-if="!secondCheckup?.id" description="暂无第二次体检记录" />
@@ -160,6 +170,11 @@
   color: #1d1d1f;
   font-size: 16px;
 }
+.header-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
 :deep(.el-card__body) {
   min-height: 200px;
 }
@@ -239,52 +254,59 @@ const form = reactive({
   report_file: null, // 体检报告文件
 })
 
-// 监听sequence变化，预填充表单
-watch(() => form.sequence, (newSequence) => {
-  const existingRecord = records.value.find(r => r.year === form.year && r.sequence === newSequence)
+function fillFormFromRecord(existingRecord) {
+  if (!existingRecord) return
+  Object.assign(form, {
+    id: existingRecord.id,
+    check_date: existingRecord.check_date,
+    hospital: existingRecord.hospital,
+    height: existingRecord.height,
+    weight: existingRecord.weight,
+    systolic_bp: existingRecord.systolic_bp,
+    diastolic_bp: existingRecord.diastolic_bp,
+    heart_rate: existingRecord.heart_rate,
+    blood_sugar: existingRecord.blood_sugar,
+    blood_lipid: existingRecord.blood_lipid,
+    liver_function: existingRecord.liver_function,
+    kidney_function: existingRecord.kidney_function,
+    blood_routine: existingRecord.blood_routine,
+    urine_routine: existingRecord.urine_routine,
+    ecg: existingRecord.ecg,
+    chest_xray: existingRecord.chest_xray,
+    b_ultrasound: existingRecord.b_ultrasound,
+    vision: existingRecord.vision,
+    hearing: existingRecord.hearing,
+    overall_result: existingRecord.overall_result,
+    doctor_advice: existingRecord.doctor_advice,
+    report_file: existingRecord.report_file,
+  })
+}
+
+function clearEditableFields() {
+  const resetFields = ['id', 'check_date', 'hospital', 'height', 'weight', 'systolic_bp', 'diastolic_bp', 'heart_rate', 'blood_sugar', 'blood_lipid', 'liver_function', 'kidney_function', 'blood_routine', 'urine_routine', 'ecg', 'chest_xray', 'b_ultrasound', 'vision', 'hearing', 'overall_result', 'doctor_advice', 'report_file']
+  resetFields.forEach(field => { form[field] = null })
+  form.hospital = ''
+  form.blood_lipid = ''
+  form.liver_function = ''
+  form.kidney_function = ''
+  form.blood_routine = ''
+  form.urine_routine = ''
+  form.ecg = ''
+  form.chest_xray = ''
+  form.b_ultrasound = ''
+  form.vision = ''
+  form.hearing = ''
+  form.overall_result = ''
+  form.doctor_advice = ''
+}
+
+// 监听 year + sequence 变化，预填充表单
+watch(() => [form.year, form.sequence], ([newYear, newSequence]) => {
+  const existingRecord = records.value.find(r => r.year === newYear && r.sequence === newSequence)
   if (existingRecord) {
-    // 预填充现有记录
-    Object.assign(form, {
-      id: existingRecord.id,
-      check_date: existingRecord.check_date,
-      hospital: existingRecord.hospital,
-      height: existingRecord.height,
-      weight: existingRecord.weight,
-      systolic_bp: existingRecord.systolic_bp,
-      diastolic_bp: existingRecord.diastolic_bp,
-      heart_rate: existingRecord.heart_rate,
-      blood_sugar: existingRecord.blood_sugar,
-      blood_lipid: existingRecord.blood_lipid,
-      liver_function: existingRecord.liver_function,
-      kidney_function: existingRecord.kidney_function,
-      blood_routine: existingRecord.blood_routine,
-      urine_routine: existingRecord.urine_routine,
-      ecg: existingRecord.ecg,
-      chest_xray: existingRecord.chest_xray,
-      b_ultrasound: existingRecord.b_ultrasound,
-      vision: existingRecord.vision,
-      hearing: existingRecord.hearing,
-      overall_result: existingRecord.overall_result,
-      doctor_advice: existingRecord.doctor_advice,
-      report_file: existingRecord.report_file,
-    })
+    fillFormFromRecord(existingRecord)
   } else {
-    // 清空非ID、elder、year、sequence字段
-    const resetFields = ['id', 'check_date', 'hospital', 'height', 'weight', 'systolic_bp', 'diastolic_bp', 'heart_rate', 'blood_sugar', 'blood_lipid', 'liver_function', 'kidney_function', 'blood_routine', 'urine_routine', 'ecg', 'chest_xray', 'b_ultrasound', 'vision', 'hearing', 'overall_result', 'doctor_advice', 'report_file']
-    resetFields.forEach(field => { form[field] = null })
-    form.hospital = ''
-    form.blood_lipid = ''
-    form.liver_function = ''
-    form.kidney_function = ''
-    form.blood_routine = ''
-    form.urine_routine = ''
-    form.ecg = ''
-    form.chest_xray = ''
-    form.b_ultrasound = ''
-    form.vision = ''
-    form.hearing = ''
-    form.overall_result = ''
-    form.doctor_advice = ''
+    clearEditableFields()
   }
 }, { immediate: true })
 
@@ -312,6 +334,8 @@ async function loadData() {
 
 function openAddDialog() {
   showAddDialog.value = true
+  form.id = null
+  form.year = currentYear.value
   // 默认选择未录入的sequence
   if (!firstCheckup.value) {
     form.sequence = 1
@@ -323,6 +347,14 @@ function openAddDialog() {
   }
   // 触发watch，预填充表单
   // resetForm() // 在watch中处理了
+}
+
+function openEditDialog(record) {
+  if (!record) return
+  showAddDialog.value = true
+  form.year = record.year
+  form.sequence = record.sequence
+  fillFormFromRecord(record)
 }
 
 function resetForm() {
@@ -383,12 +415,11 @@ async function submitCheckup() {
       hearing: form.hearing || undefined,
       overall_result: form.overall_result,
       doctor_advice: form.doctor_advice,
-      report_file: form.report_file || undefined,
     }
 
     if (form.id) {
       // 编辑现有记录
-      await request.put(`/checkup/${form.id}/`, payload)
+      await request.patch(`/checkup/${form.id}/`, payload)
       ElMessage.success('体检记录更新成功')
     } else {
       // 创建新记录
@@ -400,7 +431,11 @@ async function submitCheckup() {
     await loadData()
   } catch (error) {
     console.error('提交失败:', error)
-    ElMessage.error(error.response?.data?.detail || '录入失败，请检查输入')
+    const data = error.response?.data
+    const firstFieldError = data && typeof data === 'object'
+      ? Object.values(data).flat().find(item => typeof item === 'string')
+      : null
+    ElMessage.error(firstFieldError || data?.detail || '录入失败，请检查输入')
   }
 }
 

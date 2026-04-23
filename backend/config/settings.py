@@ -2,6 +2,7 @@ import os
 import sys
 from pathlib import Path
 from datetime import timedelta
+from config.local_sqlite import resolve_local_sqlite_path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(BASE_DIR / 'apps'))
@@ -35,6 +36,8 @@ INSTALLED_APPS = [
     'apps.checkup',
     'apps.alerts',
     'apps.ai',
+    'apps.announcements',
+    'apps.care',
 ]
 
 MIDDLEWARE = [
@@ -67,16 +70,25 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'config.wsgi.application'
 
+default_db_name = str(BASE_DIR / 'db.sqlite3')
+if os.environ.get('DB_ENGINE', 'django.db.backends.sqlite3') == 'django.db.backends.sqlite3' and not os.environ.get('DB_NAME'):
+    default_db_name = str(resolve_local_sqlite_path(BASE_DIR))
+
 DATABASES = {
     'default': {
         'ENGINE': os.environ.get('DB_ENGINE', 'django.db.backends.sqlite3'),
-        'NAME': os.environ.get('DB_NAME', str(BASE_DIR / 'db.sqlite3')),
+        'NAME': os.environ.get('DB_NAME', default_db_name),
         'USER': os.environ.get('DB_USER', ''),
         'PASSWORD': os.environ.get('DB_PASSWORD', ''),
         'HOST': os.environ.get('DB_HOST', ''),
         'PORT': os.environ.get('DB_PORT', ''),
     }
 }
+
+if DATABASES['default']['ENGINE'] == 'django.db.backends.sqlite3':
+    DATABASES['default']['OPTIONS'] = {
+        'timeout': 5,
+    }
 
 AUTH_USER_MODEL = 'elders.User'
 
